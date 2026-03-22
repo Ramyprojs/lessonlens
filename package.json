@@ -1,0 +1,10 @@
+{
+  "name": "lens-node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LENS AI screen tutor powered by a lightweight Node.js server",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}

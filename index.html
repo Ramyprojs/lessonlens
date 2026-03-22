@@ -1,0 +1,1415 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LENS — AI Screen Tutor</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d0d0d'/%3E%3Ccircle cx='32' cy='32' r='13' fill='%23ff1a35'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0d0d0d;
+        --bg-alt: #111111;
+        --panel: rgba(20, 0, 0, 0.6);
+        --panel-strong: rgba(28, 4, 6, 0.82);
+        --line: rgba(255, 26, 53, 0.2);
+        --line-strong: rgba(255, 26, 53, 0.45);
+        --text: #f5f0eb;
+        --muted: rgba(245, 240, 235, 0.66);
+        --red-deep: #c0001a;
+        --red-bright: #ff1a35;
+        --error: #ff5b6f;
+        --shadow: 0 0 12px rgba(192, 0, 26, 0.3);
+        --radius: 18px;
+        --transition: 180ms ease;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Mono", monospace;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 50% 22%, rgba(192, 0, 26, 0.22), transparent 28%),
+          linear-gradient(180deg, var(--bg), var(--bg-alt));
+        overflow: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.12;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.85'/%3E%3C/svg%3E");
+        mix-blend-mode: soft-light;
+      }
+
+      button,
+      input,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:focus-visible,
+      input:focus-visible,
+      textarea:focus-visible {
+        outline: 2px solid rgba(255, 26, 53, 0.7);
+        outline-offset: 2px;
+      }
+
+      .app-shell {
+        position: relative;
+        height: 100vh;
+        display: grid;
+        grid-template-rows: 78px 1fr;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        border-bottom: 1px solid rgba(192, 0, 26, 0.28);
+        background: rgba(8, 8, 8, 0.85);
+        backdrop-filter: blur(14px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .brand-mark {
+        display: grid;
+        gap: 2px;
+      }
+
+      .brand-mark h1 {
+        margin: 0;
+        font-family: "Bebas Neue", sans-serif;
+        font-size: clamp(2rem, 3.4vw, 3.2rem);
+        letter-spacing: 0.14em;
+        line-height: 0.9;
+        font-weight: 400;
+      }
+
+      .brand-underscore {
+        width: 74px;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--red-deep), var(--red-bright));
+        box-shadow: 0 0 18px rgba(255, 26, 53, 0.34);
+      }
+
+      .brand-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .ai-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(255, 26, 53, 0.34);
+        box-shadow: 0 0 0 rgba(255, 26, 53, 0);
+        transition: var(--transition);
+      }
+
+      .ai-dot.live {
+        background: var(--red-bright);
+        box-shadow: 0 0 14px rgba(255, 26, 53, 0.65);
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+
+      .gear-button,
+      .secondary-button,
+      .primary-button {
+        border-radius: 6px;
+        border: 1px solid transparent;
+        transition:
+          transform var(--transition),
+          border-color var(--transition),
+          box-shadow var(--transition),
+          background var(--transition),
+          filter var(--transition);
+      }
+
+      .gear-button {
+        width: 46px;
+        height: 46px;
+        border-color: rgba(255, 26, 53, 0.22);
+        background: rgba(22, 6, 8, 0.82);
+        color: var(--text);
+        font-size: 1.28rem;
+        box-shadow: var(--shadow);
+      }
+
+      .primary-button,
+      .secondary-button {
+        padding: 0.95rem 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+      }
+
+      .primary-button {
+        color: #fff4f4;
+        background: linear-gradient(135deg, var(--red-deep), var(--red-bright));
+        box-shadow: 0 0 18px rgba(255, 26, 53, 0.26);
+      }
+
+      .primary-button:hover,
+      .primary-button:focus-visible,
+      .gear-button:hover,
+      .secondary-button:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 0 20px rgba(255, 26, 53, 0.4);
+      }
+
+      .secondary-button {
+        color: var(--text);
+        background: rgba(16, 7, 8, 0.92);
+        border-color: rgba(255, 26, 53, 0.36);
+      }
+
+      .primary-button:active,
+      .secondary-button:active,
+      .gear-button:active {
+        transform: translateY(1px);
+      }
+
+      .workspace {
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .panel {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--panel);
+        backdrop-filter: blur(20px);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid rgba(255, 26, 53, 0.12);
+      }
+
+      .panel-kicker {
+        margin: 0 0 6px;
+        color: rgba(245, 240, 235, 0.54);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+      }
+
+      .panel-head h2 {
+        margin: 0;
+        font-family: "Bebas Neue", sans-serif;
+        letter-spacing: 0.08em;
+        font-weight: 400;
+        font-size: 2rem;
+      }
+
+      .auto-analyze {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+      }
+
+      .auto-analyze input {
+        accent-color: var(--red-bright);
+      }
+
+      .screen-stage {
+        position: relative;
+        flex: 1;
+        margin: 18px;
+        border-radius: calc(var(--radius) - 6px);
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        background:
+          radial-gradient(circle at center, rgba(255, 26, 53, 0.05), transparent 50%),
+          rgba(8, 8, 8, 0.92);
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(255, 26, 53, 0.08);
+      }
+
+      .screen-stage.live {
+        border-color: var(--line-strong);
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 26, 53, 0.1),
+          0 0 24px rgba(192, 0, 26, 0.22);
+      }
+
+      .screen-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+        background: #050505;
+      }
+
+      .screen-video.live {
+        display: block;
+      }
+
+      .screen-empty {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 34px;
+        text-align: center;
+      }
+
+      .screen-empty.hidden {
+        display: none;
+      }
+
+      .screen-empty-card {
+        max-width: 420px;
+        padding: 34px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        background: rgba(20, 0, 0, 0.34);
+        box-shadow: 0 0 24px rgba(192, 0, 26, 0.12);
+      }
+
+      .screen-empty-card h3 {
+        margin: 0 0 12px;
+        font-family: "Bebas Neue", sans-serif;
+        letter-spacing: 0.08em;
+        font-size: 2rem;
+        font-weight: 400;
+      }
+
+      .screen-empty-card p {
+        margin: 0 0 24px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .video-controls {
+        position: absolute;
+        inset: 18px 18px auto auto;
+        display: none;
+      }
+
+      .video-controls.visible {
+        display: block;
+      }
+
+      .analyze-bar {
+        position: absolute;
+        inset: auto 18px 18px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(19, 7, 8, 0.2), rgba(19, 7, 8, 0.75));
+        backdrop-filter: blur(10px);
+      }
+
+      .screen-meta {
+        color: var(--muted);
+        font-size: 0.8rem;
+        line-height: 1.6;
+      }
+
+      .chat-panel {
+        background:
+          linear-gradient(180deg, rgba(18, 3, 5, 0.72), rgba(10, 10, 10, 0.88)),
+          var(--panel);
+      }
+
+      .chat-thread {
+        flex: 1;
+        overflow-y: auto;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        scroll-behavior: smooth;
+      }
+
+      .message {
+        display: flex;
+        animation: rise 240ms ease both;
+      }
+
+      .message.user {
+        justify-content: flex-end;
+      }
+
+      .bubble {
+        max-width: min(82%, 640px);
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .bubble p {
+        margin: 0;
+      }
+
+      .bubble p + p,
+      .bubble p + ul,
+      .bubble ul + p,
+      .bubble pre + p,
+      .bubble p + pre,
+      .bubble ul + pre,
+      .bubble pre + ul {
+        margin-top: 12px;
+      }
+
+      .bubble strong {
+        color: #fff3f3;
+        font-weight: 600;
+      }
+
+      .bubble code {
+        padding: 0.08rem 0.32rem;
+        border-radius: 6px;
+        background: rgba(255, 26, 53, 0.12);
+        border: 1px solid rgba(255, 26, 53, 0.14);
+      }
+
+      .bubble pre {
+        margin: 12px 0 0;
+        padding: 14px;
+        border-radius: 12px;
+        overflow-x: auto;
+        background: rgba(6, 6, 6, 0.9);
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        white-space: pre;
+      }
+
+      .bubble pre code {
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .bubble ul {
+        margin: 0;
+        padding-left: 1.2rem;
+      }
+
+      .bubble li + li {
+        margin-top: 0.45rem;
+      }
+
+      .message.user .bubble {
+        background: rgba(192, 0, 26, 0.2);
+        border-color: rgba(255, 26, 53, 0.28);
+        box-shadow: inset 0 0 0 1px rgba(255, 26, 53, 0.04);
+      }
+
+      .bubble.error {
+        border-color: rgba(255, 91, 111, 0.34);
+        background: rgba(91, 10, 21, 0.5);
+        color: #ffd3d9;
+      }
+
+      .message-meta {
+        display: block;
+        margin-bottom: 8px;
+        color: rgba(245, 240, 235, 0.48);
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+      }
+
+      .typing {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .typing span {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 26, 53, 0.75);
+        animation: bounce 0.9s infinite ease-in-out;
+      }
+
+      .typing span:nth-child(2) {
+        animation-delay: 0.12s;
+      }
+
+      .typing span:nth-child(3) {
+        animation-delay: 0.24s;
+      }
+
+      .composer {
+        border-top: 1px solid rgba(255, 26, 53, 0.12);
+        padding: 18px 22px 22px;
+        background: rgba(11, 10, 10, 0.78);
+      }
+
+      .composer textarea {
+        width: 100%;
+        min-height: 104px;
+        resize: none;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        background: rgba(12, 10, 10, 0.92);
+        color: var(--text);
+        padding: 16px;
+        line-height: 1.7;
+      }
+
+      .composer textarea::placeholder,
+      .field input::placeholder {
+        color: rgba(245, 240, 235, 0.36);
+      }
+
+      .composer-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 14px;
+      }
+
+      .composer-note {
+        color: var(--muted);
+        font-size: 0.76rem;
+        line-height: 1.6;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(5, 4, 4, 0.72);
+        backdrop-filter: blur(14px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--transition);
+      }
+
+      .modal-backdrop.open {
+        display: flex;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .modal {
+        width: min(460px, 100%);
+        border-radius: 22px;
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        background: linear-gradient(180deg, rgba(25, 5, 8, 0.96), rgba(10, 10, 10, 0.96));
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48), 0 0 28px rgba(192, 0, 26, 0.18);
+        overflow: hidden;
+      }
+
+      .modal-head {
+        padding: 22px 22px 18px;
+        border-bottom: 1px solid rgba(255, 26, 53, 0.12);
+      }
+
+      .modal-head h3 {
+        margin: 0 0 8px;
+        font-family: "Bebas Neue", sans-serif;
+        letter-spacing: 0.08em;
+        font-weight: 400;
+        font-size: 2rem;
+      }
+
+      .modal-head p,
+      .helper {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .modal-body {
+        padding: 22px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field label {
+        color: rgba(245, 240, 235, 0.8);
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .field input {
+        width: 100%;
+        padding: 0.9rem 1rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        background: rgba(11, 10, 10, 0.94);
+        color: var(--text);
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+      }
+
+      .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 0 22px 22px;
+      }
+
+      .toast-stack {
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        display: grid;
+        gap: 10px;
+        z-index: 40;
+      }
+
+      .toast {
+        min-width: 260px;
+        max-width: 360px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 26, 53, 0.28);
+        background: rgba(34, 7, 10, 0.92);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+        color: var(--text);
+        animation: rise 220ms ease both;
+      }
+
+      .toast.error {
+        border-color: rgba(255, 91, 111, 0.34);
+        color: #ffd3d9;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          box-shadow: 0 0 12px rgba(255, 26, 53, 0.5);
+        }
+        50% {
+          transform: scale(1.08);
+          box-shadow: 0 0 18px rgba(255, 26, 53, 0.72);
+        }
+      }
+
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.52;
+        }
+        40% {
+          transform: translateY(-5px);
+          opacity: 1;
+        }
+      }
+
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 980px) {
+        body {
+          overflow: auto;
+        }
+
+        .app-shell {
+          height: auto;
+          min-height: 100vh;
+        }
+
+        .workspace {
+          grid-template-columns: 1fr;
+          grid-template-rows: minmax(420px, 52vh) minmax(420px, auto);
+        }
+
+        .topbar {
+          padding: 0 18px;
+        }
+
+        .brand {
+          gap: 12px;
+        }
+
+        .brand-status {
+          display: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .panel-head,
+        .composer,
+        .modal-body,
+        .modal-head,
+        .modal-actions {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .workspace {
+          gap: 16px;
+          padding: 16px;
+        }
+
+        .screen-stage {
+          margin: 16px;
+        }
+
+        .composer-foot,
+        .analyze-bar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .bubble {
+          max-width: 92%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="LENS header">
+          <div class="brand-mark">
+            <h1>LENS</h1>
+            <span class="brand-underscore" aria-hidden="true"></span>
+          </div>
+          <div class="brand-status">
+            <span id="aiDot" class="ai-dot" aria-hidden="true"></span>
+            <span id="aiStatusText">Tutor Ready</span>
+          </div>
+        </div>
+
+        <button id="openSettingsButton" class="gear-button" type="button" aria-label="Open settings">
+          ⚙
+        </button>
+      </header>
+
+      <main class="workspace">
+        <section class="panel" aria-labelledby="screenPanelTitle">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">Screen</p>
+              <h2 id="screenPanelTitle">Live Screen Share</h2>
+            </div>
+
+            <label class="auto-analyze" for="autoAnalyzeToggle">
+              <input id="autoAnalyzeToggle" type="checkbox" />
+              <span>Auto-analyze every 10s</span>
+            </label>
+          </div>
+
+          <div id="screenStage" class="screen-stage">
+            <video id="screenVideo" class="screen-video" autoplay muted playsinline aria-label="Shared screen preview"></video>
+
+            <div id="screenEmpty" class="screen-empty">
+              <div class="screen-empty-card">
+                <h3>Share Your Screen</h3>
+                <p>
+                  Put your work on the left, ask your questions on the right, and let LENS teach through whatever is on screen.
+                </p>
+                <button id="startSharingButton" class="primary-button" type="button">
+                  Start Sharing
+                </button>
+              </div>
+            </div>
+
+            <div id="videoControls" class="video-controls">
+              <button id="stopSharingButton" class="secondary-button" type="button">
+                Stop
+              </button>
+            </div>
+
+            <div class="analyze-bar">
+              <div id="screenMeta" class="screen-meta">
+                No live screen yet. Start sharing to let LENS see what you are working on.
+              </div>
+              <button id="analyzeButton" class="primary-button" type="button">
+                Analyze Now
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel chat-panel" aria-labelledby="chatPanelTitle">
+          <div class="panel-head">
+            <div>
+              <p class="panel-kicker">LENS Tutor Chat</p>
+              <h2 id="chatPanelTitle">Ask While You Work</h2>
+            </div>
+          </div>
+
+          <div id="chatThread" class="chat-thread" aria-live="polite"></div>
+
+          <form id="chatForm" class="composer">
+            <label class="visually-hidden" for="userInput">Message LENS</label>
+            <textarea
+              id="userInput"
+              placeholder="Ask what the screen means, what the code is doing, why an error happened, or what to learn next..."
+            ></textarea>
+
+            <div class="composer-foot">
+              <div class="composer-note">
+                If screen sharing is active, LENS attaches the current frame automatically when you send.
+              </div>
+              <button id="sendButton" class="primary-button" type="submit">Send</button>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+
+    <div id="settingsModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal-head">
+          <h3 id="settingsTitle">Settings</h3>
+          <p>Store your Cloudflare credentials locally in this browser so your local Node server can send screenshots and chat turns.</p>
+        </div>
+
+        <form id="settingsForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="accountIdInput">Cloudflare Account ID</label>
+              <input id="accountIdInput" name="accountId" type="text" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <label for="apiTokenInput">Cloudflare API Token</label>
+              <div class="field-row">
+                <input id="apiTokenInput" name="apiToken" type="password" autocomplete="off" />
+                <button id="toggleTokenButton" class="secondary-button" type="button">Show</button>
+              </div>
+            </div>
+
+            <p class="helper">Nothing is sent anywhere until you choose to share your screen or send a message.</p>
+          </div>
+
+          <div class="modal-actions">
+            <button id="closeSettingsButton" class="secondary-button" type="button">Close</button>
+            <button class="primary-button" type="submit">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      const STORAGE_KEY = "lens.cloudflare.settings.v1";
+      const DEFAULT_ANALYZE_PROMPT = "What do you see on my screen? Teach me about it.";
+      const AUTO_ANALYZE_PROMPT =
+        "Look at the current screen and tell me what the user is working on, what matters most right now, and the best thing to learn or fix next.";
+
+      const state = {
+        stream: null,
+        messages: [],
+        thinking: false,
+        autoAnalyze: false,
+        autoTimer: null,
+        serverCredentialsAvailable: false,
+        settings: loadSettings(),
+      };
+
+      const elements = {
+        aiDot: document.getElementById("aiDot"),
+        aiStatusText: document.getElementById("aiStatusText"),
+        analyzeButton: document.getElementById("analyzeButton"),
+        apiTokenInput: document.getElementById("apiTokenInput"),
+        autoAnalyzeToggle: document.getElementById("autoAnalyzeToggle"),
+        accountIdInput: document.getElementById("accountIdInput"),
+        chatForm: document.getElementById("chatForm"),
+        chatThread: document.getElementById("chatThread"),
+        closeSettingsButton: document.getElementById("closeSettingsButton"),
+        openSettingsButton: document.getElementById("openSettingsButton"),
+        screenEmpty: document.getElementById("screenEmpty"),
+        screenMeta: document.getElementById("screenMeta"),
+        screenStage: document.getElementById("screenStage"),
+        screenVideo: document.getElementById("screenVideo"),
+        sendButton: document.getElementById("sendButton"),
+        settingsForm: document.getElementById("settingsForm"),
+        settingsModal: document.getElementById("settingsModal"),
+        startSharingButton: document.getElementById("startSharingButton"),
+        stopSharingButton: document.getElementById("stopSharingButton"),
+        toggleTokenButton: document.getElementById("toggleTokenButton"),
+        toastStack: document.getElementById("toastStack"),
+        userInput: document.getElementById("userInput"),
+        videoControls: document.getElementById("videoControls"),
+      };
+
+      addMessage(
+        "assistant",
+        "Share your screen on the left, then ask me what you want to learn. I will look at the screen, explain what matters, and teach through the next step."
+      );
+
+      hydrateSettingsForm();
+      renderMessages();
+      updateScreenUI();
+      void loadServerConfig();
+
+      elements.openSettingsButton.addEventListener("click", openSettings);
+      elements.closeSettingsButton.addEventListener("click", closeSettings);
+      elements.settingsModal.addEventListener("click", (event) => {
+        if (event.target === elements.settingsModal) {
+          closeSettings();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeSettings();
+        }
+      });
+
+      elements.toggleTokenButton.addEventListener("click", () => {
+        const isPassword = elements.apiTokenInput.type === "password";
+        elements.apiTokenInput.type = isPassword ? "text" : "password";
+        elements.toggleTokenButton.textContent = isPassword ? "Hide" : "Show";
+      });
+
+      elements.settingsForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        state.settings = {
+          accountId: elements.accountIdInput.value.trim(),
+          apiToken: elements.apiTokenInput.value.trim(),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
+        closeSettings();
+        showToast("Credentials saved locally.");
+      });
+
+      elements.startSharingButton.addEventListener("click", startScreenShare);
+      elements.stopSharingButton.addEventListener("click", stopScreenShare);
+      elements.analyzeButton.addEventListener("click", () =>
+        requestTutor(DEFAULT_ANALYZE_PROMPT, {
+          captureScreen: true,
+          showUserMessage: false,
+        })
+      );
+
+      elements.autoAnalyzeToggle.addEventListener("change", () => {
+        state.autoAnalyze = elements.autoAnalyzeToggle.checked;
+        refreshAutoAnalyze();
+      });
+
+      elements.userInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          elements.chatForm.requestSubmit();
+        }
+      });
+
+      elements.chatForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const prompt = elements.userInput.value.trim();
+        if (!prompt) {
+          showToast("Write a message before sending.", true);
+          return;
+        }
+
+        elements.userInput.value = "";
+        autoSizeTextarea();
+
+        await requestTutor(prompt, {
+          captureScreen: Boolean(state.stream),
+          showUserMessage: true,
+        });
+      });
+
+      elements.userInput.addEventListener("input", autoSizeTextarea);
+      autoSizeTextarea();
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return { accountId: "", apiToken: "" };
+          }
+
+          const parsed = JSON.parse(raw);
+          return {
+            accountId: parsed.accountId || "",
+            apiToken: parsed.apiToken || "",
+          };
+        } catch (error) {
+          return { accountId: "", apiToken: "" };
+        }
+      }
+
+      async function loadServerConfig() {
+        try {
+          const response = await fetch("/api/config");
+          if (!response.ok) {
+            return;
+          }
+
+          const data = await response.json();
+          state.serverCredentialsAvailable = Boolean(data.hasServerCredentials);
+        } catch (error) {
+          state.serverCredentialsAvailable = false;
+        }
+      }
+
+      function hydrateSettingsForm() {
+        elements.accountIdInput.value = state.settings.accountId;
+        elements.apiTokenInput.value = state.settings.apiToken;
+        elements.apiTokenInput.type = "password";
+        elements.toggleTokenButton.textContent = "Show";
+      }
+
+      function openSettings() {
+        hydrateSettingsForm();
+        elements.settingsModal.classList.add("open");
+        elements.settingsModal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeSettings() {
+        elements.settingsModal.classList.remove("open");
+        elements.settingsModal.setAttribute("aria-hidden", "true");
+      }
+
+      function autoSizeTextarea() {
+        elements.userInput.style.height = "auto";
+        elements.userInput.style.height = Math.min(elements.userInput.scrollHeight, 220) + "px";
+      }
+
+      function showToast(message, isError = false) {
+        const toast = document.createElement("div");
+        toast.className = "toast" + (isError ? " error" : "");
+        toast.textContent = message;
+        elements.toastStack.appendChild(toast);
+
+        window.setTimeout(() => {
+          toast.remove();
+        }, 3400);
+      }
+
+      function createMessage(role, content, options = {}) {
+        return {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          role,
+          content,
+          error: Boolean(options.error),
+        };
+      }
+
+      function addMessage(role, content, options = {}) {
+        state.messages.push(createMessage(role, content, options));
+      }
+
+      function escapeHtml(value) {
+        return value
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function applyInlineFormatting(value) {
+        return escapeHtml(value)
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+      }
+
+      function appendTextBlocks(container, value) {
+        const blocks = value.split(/\n{2,}/);
+
+        blocks.forEach((block) => {
+          const trimmed = block.trim();
+          if (!trimmed) {
+            return;
+          }
+
+          const lines = trimmed.split("\n");
+          const isBulletList = lines.length > 0 && lines.every((line) => /^[-*]\s+/.test(line.trim()));
+
+          if (isBulletList) {
+            const list = document.createElement("ul");
+            lines.forEach((line) => {
+              const item = document.createElement("li");
+              item.innerHTML = applyInlineFormatting(line.trim().replace(/^[-*]\s+/, ""));
+              list.appendChild(item);
+            });
+            container.appendChild(list);
+            return;
+          }
+
+          const paragraph = document.createElement("p");
+          paragraph.innerHTML = lines.map((line) => applyInlineFormatting(line)).join("<br>");
+          container.appendChild(paragraph);
+        });
+      }
+
+      function appendFormattedContent(container, value) {
+        const fencePattern = /```([\w#+-]+)?\n?([\s\S]*?)```/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = fencePattern.exec(value)) !== null) {
+          appendTextBlocks(container, value.slice(lastIndex, match.index));
+
+          const pre = document.createElement("pre");
+          const code = document.createElement("code");
+          code.textContent = match[2].trim();
+          pre.appendChild(code);
+          container.appendChild(pre);
+
+          lastIndex = match.index + match[0].length;
+        }
+
+        appendTextBlocks(container, value.slice(lastIndex));
+      }
+
+      function renderMessages() {
+        elements.chatThread.innerHTML = "";
+
+        state.messages.forEach((message) => {
+          const row = document.createElement("article");
+          row.className = `message ${message.role}`;
+
+          const bubble = document.createElement("div");
+          bubble.className = "bubble" + (message.error ? " error" : "");
+
+          const meta = document.createElement("span");
+          meta.className = "message-meta";
+          meta.textContent = message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS";
+
+          const text = document.createElement("div");
+          appendFormattedContent(text, message.content);
+
+          bubble.append(meta, text);
+          row.appendChild(bubble);
+          elements.chatThread.appendChild(row);
+        });
+
+        if (state.thinking) {
+          const row = document.createElement("article");
+          row.className = "message assistant";
+
+          const bubble = document.createElement("div");
+          bubble.className = "bubble";
+
+          const meta = document.createElement("span");
+          meta.className = "message-meta";
+          meta.textContent = "LENS";
+
+          const status = document.createElement("div");
+          status.className = "typing";
+          status.setAttribute("aria-label", "LENS is thinking");
+          status.innerHTML = "<span></span><span></span><span></span>";
+
+          bubble.append(meta, status);
+          row.appendChild(bubble);
+          elements.chatThread.appendChild(row);
+        }
+
+        elements.chatThread.scrollTop = elements.chatThread.scrollHeight;
+      }
+
+      function setThinking(nextValue) {
+        state.thinking = nextValue;
+        elements.aiDot.classList.toggle("live", nextValue);
+        elements.aiStatusText.textContent = nextValue ? "Tutor Thinking" : "Tutor Ready";
+        elements.sendButton.disabled = nextValue;
+        elements.analyzeButton.disabled = nextValue;
+        renderMessages();
+      }
+
+      function hasCredentials() {
+        return Boolean(
+          (state.settings.accountId && state.settings.apiToken) ||
+          state.serverCredentialsAvailable
+        );
+      }
+
+      function updateScreenUI() {
+        const isLive = Boolean(state.stream);
+        elements.screenStage.classList.toggle("live", isLive);
+        elements.screenVideo.classList.toggle("live", isLive);
+        elements.videoControls.classList.toggle("visible", isLive);
+        elements.screenEmpty.classList.toggle("hidden", isLive);
+
+        if (!isLive) {
+          elements.screenMeta.textContent =
+            "No live screen yet. Start sharing to let LENS see what you are working on.";
+          return;
+        }
+
+        const track = state.stream.getVideoTracks()[0];
+        elements.screenMeta.textContent = track && track.label
+          ? `Live source: ${track.label}`
+          : "Live source connected.";
+      }
+
+      async function startScreenShare() {
+        try {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            throw new Error("This browser does not support screen sharing.");
+          }
+
+          stopScreenShare();
+
+          const stream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: false,
+          });
+
+          const track = stream.getVideoTracks()[0];
+          if (track) {
+            track.addEventListener("ended", () => {
+              stopScreenShare();
+              showToast("Screen sharing stopped.");
+            }, { once: true });
+          }
+
+          state.stream = stream;
+          elements.screenVideo.srcObject = stream;
+          await elements.screenVideo.play().catch(() => undefined);
+          updateScreenUI();
+          refreshAutoAnalyze();
+          showToast("Screen sharing started.");
+        } catch (error) {
+          showToast(error.message || "Could not start screen sharing.", true);
+        }
+      }
+
+      function stopScreenShare() {
+        if (state.stream) {
+          state.stream.getTracks().forEach((track) => track.stop());
+        }
+
+        state.stream = null;
+        elements.screenVideo.srcObject = null;
+        refreshAutoAnalyze();
+        updateScreenUI();
+      }
+
+      function refreshAutoAnalyze() {
+        if (state.autoTimer) {
+          clearInterval(state.autoTimer);
+          state.autoTimer = null;
+        }
+
+        if (!state.autoAnalyze || !state.stream) {
+          return;
+        }
+
+        state.autoTimer = window.setInterval(() => {
+          if (!state.thinking) {
+            requestTutor(AUTO_ANALYZE_PROMPT, {
+              captureScreen: true,
+              showUserMessage: false,
+            });
+          }
+        }, 10000);
+      }
+
+      function captureFrame() {
+        const video = elements.screenVideo;
+        if (!state.stream || !video.videoWidth || !video.videoHeight) {
+          return "";
+        }
+
+        const canvas = document.createElement("canvas");
+        const maxWidth = 1600;
+        const scale = Math.min(1, maxWidth / video.videoWidth);
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          return "";
+        }
+
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/png");
+      }
+
+      function historyForApi() {
+        return state.messages
+          .filter((message) => !message.error && (message.role === "user" || message.role === "assistant"))
+          .slice(-10)
+          .map((message) => ({
+            role: message.role,
+            content: message.content,
+          }));
+      }
+
+      async function requestTutor(message, options) {
+        const prompt = message.trim();
+        if (!prompt) {
+          showToast("Please write a prompt first.", true);
+          return;
+        }
+
+        if (!hasCredentials()) {
+          showToast("Please add your Cloudflare credentials in Settings ⚙", true);
+          return;
+        }
+
+        let frameDataUrl = "";
+        if (options.captureScreen) {
+          frameDataUrl = captureFrame();
+          if (!frameDataUrl) {
+            showToast("Start screen sharing before analyzing.", true);
+            return;
+          }
+        }
+
+        const history = historyForApi();
+
+        if (options.showUserMessage) {
+          addMessage("user", prompt);
+          renderMessages();
+        }
+
+        setThinking(true);
+        elements.screenMeta.textContent = options.captureScreen
+          ? "Analyzing the current screen..."
+          : "Thinking through your question...";
+
+        try {
+          const reply = await callLensApi({
+            accountId: state.settings.accountId,
+            apiToken: state.settings.apiToken,
+            history,
+            frameDataUrl,
+            userMessage: prompt,
+          });
+
+          addMessage("assistant", reply);
+        } catch (error) {
+          addMessage("assistant", error.message || "The request failed.", { error: true });
+        } finally {
+          setThinking(false);
+          updateScreenUI();
+        }
+      }
+
+      async function callLensApi({ accountId, apiToken, history, frameDataUrl, userMessage }) {
+        let response;
+        let data;
+
+        try {
+          response = await fetch("/api/lens", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              accountId,
+              apiToken,
+              history,
+              frameDataUrl,
+              userMessage,
+            }),
+          });
+        } catch (error) {
+          throw new Error("Could not reach the local Node server.");
+        }
+
+        try {
+          data = await response.json();
+        } catch (error) {
+          throw new Error(`The local server returned status ${response.status} with an unreadable response.`);
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || `The local server returned status ${response.status}.`);
+        }
+
+        const reply = typeof data.reply === "string" ? data.reply.trim() : "";
+
+        if (!reply) {
+          throw new Error("The local server returned no tutor response.");
+        }
+
+        return reply;
+      }
+    </script>
+  </body>
+</html>
