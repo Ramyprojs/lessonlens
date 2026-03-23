@@ -5,7 +5,7 @@ const path = require("node:path");
 
 const BASE_PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "127.0.0.1";
-const MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
+const DEFAULT_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 const INDEX_PATH = path.join(__dirname, "index.html");
 const ENV_PATH = path.join(__dirname, ".env");
 const SYSTEM_PROMPT = `You are LENS, an expert AI tutor. Your entire purpose is to help the user LEARN.
@@ -27,7 +27,20 @@ When the screen shows a coding problem, competitive programming prompt, or LeetC
 - Prefer this order when useful: problem understanding, approach, edge cases, complexity, then complete solution
 - If you provide code, it must be complete and not truncated
 - If you see existing user code, explain why it is wrong and what should change
-Prefer short sections with bold labels instead of markdown bullet stars when possible.`;
+Prefer short sections with bold labels instead of markdown bullet stars when possible.
+When describing a screenshot or webpage, follow these grounding rules:
+- Only describe content that is visibly present in the image
+- If text is unreadable or partially cut off, explicitly say that it is unclear
+- Do not infer brand names, product names, or page purpose unless clearly visible
+- Include a short "Visible evidence" section with exact on-screen words you can read
+- Keep summaries concise: 4-8 lines unless the user asks for more detail
+If the user asks for a website or page summary, use this structure:
+- Topic: what the page is mainly about
+- What it offers: key actions/features visible
+- Search intent: what the user likely searched for to reach this page
+- Visible evidence: exact words seen on screen
+- Unclear/missing: what cannot be read clearly
+Never fabricate details not visible in the screenshot.`;
 
 loadDotEnv();
 
@@ -102,7 +115,8 @@ async function readJson(request) {
 }
 
 function cloudflareUrl(accountId) {
-  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${MODEL}`;
+  const model = String(process.env.CLOUDFLARE_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
+  return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`;
 }
 
 function resolveCredentials(body) {

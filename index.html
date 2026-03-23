@@ -11,25 +11,29 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --bg: #0d0d0d;
-        --bg-alt: #111111;
-        --panel: rgba(20, 0, 0, 0.6);
-        --panel-strong: rgba(28, 4, 6, 0.82);
-        --line: rgba(255, 26, 53, 0.2);
-        --line-strong: rgba(255, 26, 53, 0.45);
+        --bg: #090909;
+        --bg-soft: #111111;
+        --panel: rgba(22, 3, 6, 0.68);
+        --panel-strong: rgba(18, 8, 10, 0.9);
+        --panel-hover: rgba(30, 7, 10, 0.84);
+        --line: rgba(255, 26, 53, 0.16);
+        --line-strong: rgba(255, 26, 53, 0.32);
         --text: #f5f0eb;
-        --muted: rgba(245, 240, 235, 0.66);
+        --muted: rgba(245, 240, 235, 0.68);
+        --muted-soft: rgba(245, 240, 235, 0.44);
         --red-deep: #c0001a;
         --red-bright: #ff1a35;
-        --error: #ff5b6f;
-        --shadow: 0 0 12px rgba(192, 0, 26, 0.3);
-        --radius: 18px;
-        --transition: 180ms ease;
+        --red-glow: rgba(255, 26, 53, 0.3);
+        --green: #6cffaa;
+        --shadow: 0 0 18px rgba(192, 0, 26, 0.18);
+        --radius: 28px;
+        --radius-sm: 16px;
+        --transition: 220ms ease;
       }
 
       * {
@@ -43,12 +47,13 @@
 
       body {
         margin: 0;
-        font-family: "IBM Plex Mono", monospace;
+        font-family: "Manrope", "IBM Plex Mono", monospace;
         color: var(--text);
         background:
-          radial-gradient(circle at 50% 22%, rgba(192, 0, 26, 0.22), transparent 28%),
-          linear-gradient(180deg, var(--bg), var(--bg-alt));
-        overflow: hidden;
+          radial-gradient(circle at 12% 12%, rgba(255, 26, 53, 0.16), transparent 0 34%),
+          radial-gradient(circle at 92% 6%, rgba(192, 0, 26, 0.12), transparent 0 22%),
+          linear-gradient(180deg, #070707 0%, #0a0a0a 48%, #0f0f0f 100%);
+        overflow: auto;
       }
 
       body::before {
@@ -56,9 +61,17 @@
         position: fixed;
         inset: 0;
         pointer-events: none;
-        opacity: 0.12;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.85'/%3E%3C/svg%3E");
+        opacity: 0.1;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.05' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.72'/%3E%3C/svg%3E");
         mix-blend-mode: soft-light;
+      }
+
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(180deg, rgba(255, 26, 53, 0.03), transparent 20%, transparent 80%, rgba(255, 26, 53, 0.04));
       }
 
       button,
@@ -74,25 +87,75 @@
       button:focus-visible,
       input:focus-visible,
       textarea:focus-visible {
-        outline: 2px solid rgba(255, 26, 53, 0.7);
+        outline: 2px solid rgba(255, 26, 53, 0.75);
         outline-offset: 2px;
+      }
+
+      .background-canvas {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        opacity: 0.56;
+        z-index: 0;
+      }
+
+      .background-glow {
+        position: fixed;
+        inset: auto;
+        width: 38vw;
+        height: 38vw;
+        min-width: 280px;
+        min-height: 280px;
+        border-radius: 50%;
+        filter: blur(90px);
+        pointer-events: none;
+        opacity: 0.12;
+        z-index: 0;
+        animation: glowFloat 14s ease-in-out infinite;
+      }
+
+      .background-glow.one {
+        top: -10vh;
+        right: -12vw;
+        background: radial-gradient(circle, rgba(255, 26, 53, 0.92), transparent 64%);
+      }
+
+      .background-glow.two {
+        left: -14vw;
+        bottom: -16vh;
+        background: radial-gradient(circle, rgba(192, 0, 26, 0.88), transparent 60%);
+        animation-delay: -7s;
       }
 
       .app-shell {
         position: relative;
-        height: 100vh;
+        z-index: 1;
+        min-height: 100vh;
+        width: calc(100% - 12px);
+        max-width: 1840px;
+        margin: 0 auto;
+        padding: 14px 0 18px;
         display: grid;
-        grid-template-rows: 78px 1fr;
+        grid-template-rows: auto 1fr;
+        gap: 14px;
       }
 
       .topbar {
-        display: flex;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
         align-items: center;
-        justify-content: space-between;
-        padding: 0 28px;
-        border-bottom: 1px solid rgba(192, 0, 26, 0.28);
-        background: rgba(8, 8, 8, 0.85);
+        gap: 24px;
+        padding: 14px 20px;
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        border-radius: 24px;
+        background: rgba(10, 10, 10, 0.7);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         backdrop-filter: blur(14px);
+        position: sticky;
+        top: 12px;
+        z-index: 10;
       }
 
       .brand {
@@ -108,11 +171,11 @@
 
       .brand-mark h1 {
         margin: 0;
-        font-family: "Bebas Neue", sans-serif;
-        font-size: clamp(2rem, 3.4vw, 3.2rem);
-        letter-spacing: 0.14em;
-        line-height: 0.9;
-        font-weight: 400;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: clamp(1.6rem, 2.7vw, 2.3rem);
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        line-height: 1;
       }
 
       .brand-underscore {
@@ -128,9 +191,9 @@
         align-items: center;
         gap: 10px;
         color: var(--muted);
-        font-size: 0.84rem;
+        font-size: 0.73rem;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.08em;
       }
 
       .ai-dot {
@@ -139,147 +202,648 @@
         border-radius: 999px;
         background: rgba(255, 26, 53, 0.34);
         box-shadow: 0 0 0 rgba(255, 26, 53, 0);
-        transition: var(--transition);
       }
 
       .ai-dot.live {
         background: var(--red-bright);
-        box-shadow: 0 0 14px rgba(255, 26, 53, 0.65);
+        box-shadow: 0 0 14px rgba(255, 26, 53, 0.66);
         animation: pulse 1.2s ease-in-out infinite;
       }
 
+      .nav-tabs {
+        display: inline-flex;
+        align-items: center;
+        justify-self: center;
+        gap: 8px;
+        padding: 6px;
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        border-radius: 999px;
+        background: rgba(18, 10, 10, 0.56);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.04),
+          0 10px 28px rgba(0, 0, 0, 0.24);
+      }
+
+      .nav-tab,
       .gear-button,
       .secondary-button,
-      .primary-button {
-        border-radius: 6px;
+      .primary-button,
+      .ghost-button,
+      .quick-button,
+      .history-action {
+        border-radius: 10px;
         border: 1px solid transparent;
         transition:
           transform var(--transition),
           border-color var(--transition),
           box-shadow var(--transition),
           background var(--transition),
-          filter var(--transition);
+          filter var(--transition),
+          opacity var(--transition);
+      }
+
+      .nav-tab {
+        padding: 0.72rem 1.1rem;
+        color: var(--muted);
+        background: transparent;
+        font-size: 0.74rem;
+        letter-spacing: 0.07em;
+        font-weight: 700;
+        text-transform: uppercase;
+        border-radius: 999px;
+      }
+
+      .nav-tab.active {
+        color: var(--text);
+        background: linear-gradient(135deg, rgba(192, 0, 26, 0.88), rgba(255, 26, 53, 0.78));
+        box-shadow: 0 8px 24px rgba(255, 26, 53, 0.24);
+      }
+
+      .nav-tab:hover,
+      .nav-tab:focus-visible,
+      .gear-button:hover,
+      .secondary-button:hover,
+      .primary-button:hover,
+      .ghost-button:hover,
+      .quick-button:hover,
+      .history-action:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 0 18px rgba(255, 26, 53, 0.22);
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.66rem 0.86rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        background: rgba(18, 10, 10, 0.68);
+        color: var(--muted);
+        font-size: 0.68rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status-pill.good::before,
+      .status-pill.live::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 12px rgba(108, 255, 170, 0.6);
+      }
+
+      .status-pill.live::before {
+        background: var(--red-bright);
+        box-shadow: 0 0 12px rgba(255, 26, 53, 0.5);
+      }
+
+      .status-pill.subtle {
+        color: var(--muted-soft);
+      }
+
+      .gear-button,
+      .secondary-button,
+      .primary-button,
+      .ghost-button,
+      .history-action {
+        font-weight: 600;
+        letter-spacing: 0.05em;
       }
 
       .gear-button {
-        width: 46px;
-        height: 46px;
-        border-color: rgba(255, 26, 53, 0.22);
-        background: rgba(22, 6, 8, 0.82);
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        border-color: rgba(255, 26, 53, 0.18);
+        background: rgba(24, 8, 10, 0.8);
         color: var(--text);
-        font-size: 1.28rem;
-        box-shadow: var(--shadow);
+        font-size: 1.05rem;
       }
 
       .primary-button,
-      .secondary-button {
-        padding: 0.95rem 1.1rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
+      .secondary-button,
+      .ghost-button,
+      .history-action {
+        padding: 0.84rem 1.05rem;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        text-transform: uppercase;
       }
 
       .primary-button {
         color: #fff4f4;
         background: linear-gradient(135deg, var(--red-deep), var(--red-bright));
-        box-shadow: 0 0 18px rgba(255, 26, 53, 0.26);
+        box-shadow: 0 0 18px rgba(255, 26, 53, 0.24);
       }
 
-      .primary-button:hover,
-      .primary-button:focus-visible,
-      .gear-button:hover,
-      .secondary-button:hover {
-        filter: brightness(1.08);
-        box-shadow: 0 0 20px rgba(255, 26, 53, 0.4);
-      }
-
-      .secondary-button {
+      .secondary-button,
+      .history-action {
         color: var(--text);
-        background: rgba(16, 7, 8, 0.92);
-        border-color: rgba(255, 26, 53, 0.36);
+        background: rgba(17, 9, 10, 0.92);
+        border-color: rgba(255, 26, 53, 0.26);
       }
 
-      .primary-button:active,
-      .secondary-button:active,
-      .gear-button:active {
-        transform: translateY(1px);
+      .ghost-button {
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 255, 255, 0.06);
       }
 
-      .workspace {
+      .quick-button {
+        padding: 0.7rem 0.88rem;
+        background: rgba(255, 255, 255, 0.03);
+        border-color: rgba(255, 26, 53, 0.1);
+        color: var(--muted);
+        font-size: 0.72rem;
+        letter-spacing: 0.05em;
+      }
+
+      .views-shell {
+        position: relative;
         min-height: 0;
-        display: grid;
-        grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
-        gap: 20px;
-        padding: 20px;
+      }
+
+      .view {
+        display: none;
+        height: 100%;
+        padding: 2px;
+        overflow: auto;
+      }
+
+      .view.active {
+        display: block;
+        animation: viewIn 280ms ease both;
       }
 
       .panel {
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        background: var(--panel);
-        backdrop-filter: blur(20px);
-        box-shadow: var(--shadow);
-        overflow: hidden;
+        background:
+          linear-gradient(180deg, rgba(24, 7, 10, 0.66), rgba(11, 10, 10, 0.8)),
+          var(--panel);
+        backdrop-filter: blur(18px);
+        box-shadow:
+          var(--shadow),
+          inset 0 1px 0 rgba(255, 255, 255, 0.04);
       }
 
-      .panel-head {
+      .panel:hover {
+        border-color: rgba(255, 26, 53, 0.24);
+        background:
+          linear-gradient(180deg, rgba(26, 6, 10, 0.8), rgba(12, 10, 10, 0.88)),
+          var(--panel-hover);
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translate3d(0, 22px, 0) scale(0.985);
+        filter: blur(2px);
+        transition:
+          opacity 560ms cubic-bezier(0.2, 0.7, 0.2, 1),
+          transform 560ms cubic-bezier(0.2, 0.7, 0.2, 1),
+          filter 560ms cubic-bezier(0.2, 0.7, 0.2, 1);
+        transition-delay: var(--delay, 0ms);
+      }
+
+      .reveal.in {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        filter: blur(0);
+      }
+
+      .panel-header {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
         gap: 16px;
-        padding: 20px 22px 16px;
-        border-bottom: 1px solid rgba(255, 26, 53, 0.12);
+        padding: 24px 24px 0;
       }
 
       .panel-kicker {
         margin: 0 0 6px;
-        color: rgba(245, 240, 235, 0.54);
+        color: var(--muted-soft);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: clamp(1.45rem, 2vw, 2rem);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.1;
+      }
+
+      .panel-copy {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      .home-grid {
+        min-height: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.95fr);
+        grid-template-rows: auto auto;
+        gap: 16px;
+      }
+
+      .hero-panel {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+        gap: 20px;
+        padding: 26px;
+      }
+
+      .hero-copy h2 {
+        margin: 0;
+        font-family: "Space Grotesk", sans-serif;
+        font-size: clamp(2.25rem, 4.6vw, 4.25rem);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        line-height: 1.02;
+        max-width: 16ch;
+      }
+
+      .hero-copy p {
+        margin: 16px 0 0;
+        color: var(--muted);
+        line-height: 1.76;
+        max-width: 58ch;
+      }
+
+      .hero-actions,
+      .home-stat-row,
+      .feature-grid,
+      .workflow-grid,
+      .quick-actions,
+      .history-detail-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .hero-actions {
+        margin-top: 24px;
+      }
+
+      .home-stat-row {
+        margin-top: 26px;
+      }
+
+      .stat-card {
+        min-width: 140px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 26, 53, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      }
+
+      .stat-card span {
+        display: block;
+        color: var(--muted-soft);
         font-size: 0.72rem;
         text-transform: uppercase;
-        letter-spacing: 0.14em;
+        letter-spacing: 0.12em;
       }
 
-      .panel-head h2 {
-        margin: 0;
+      .stat-card strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 1.2rem;
+      }
+
+      .hero-visual {
+        position: relative;
+        min-height: 360px;
+        border-radius: calc(var(--radius) - 6px);
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        background:
+          radial-gradient(circle at 50% 24%, rgba(255, 26, 53, 0.12), transparent 0 56%),
+          linear-gradient(180deg, rgba(12, 12, 12, 0.76), rgba(9, 9, 9, 0.82));
+        overflow: hidden;
+      }
+
+      .orbital-ring {
+        position: absolute;
+        inset: 50%;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 26, 53, 0.18);
+        transform: translate(-50%, -50%);
+      }
+
+      .orbital-ring.one {
+        width: 54%;
+        height: 54%;
+        animation: spin 18s linear infinite;
+      }
+
+      .orbital-ring.two {
+        width: 74%;
+        height: 74%;
+        border-style: dashed;
+        animation: spinReverse 22s linear infinite;
+      }
+
+      .orbital-ring.three {
+        width: 92%;
+        height: 92%;
+        opacity: 0.6;
+        animation: pulseRing 5s ease-in-out infinite;
+      }
+
+      .core-pulse {
+        position: absolute;
+        inset: 50%;
+        width: 128px;
+        height: 128px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        background:
+          radial-gradient(circle at 35% 35%, rgba(255, 240, 240, 0.5), rgba(255, 26, 53, 0.8) 40%, rgba(80, 8, 18, 0.9) 70%);
+        box-shadow:
+          0 0 60px rgba(255, 26, 53, 0.24),
+          inset 0 0 18px rgba(255, 255, 255, 0.18);
+        animation: pulseRing 3.4s ease-in-out infinite;
+      }
+
+      .floating-card {
+        position: absolute;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        background: rgba(14, 10, 10, 0.82);
+        box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+        max-width: 190px;
+      }
+
+      .floating-card span {
+        display: block;
+        color: var(--muted-soft);
+        font-size: 0.68rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .floating-card strong {
+        display: block;
+        margin-top: 8px;
+        line-height: 1.55;
+      }
+
+      .floating-card.one {
+        top: 16%;
+        left: 8%;
+        animation: drift 7s ease-in-out infinite;
+      }
+
+      .floating-card.two {
+        top: 18%;
+        right: 8%;
+        animation: drift 8s ease-in-out infinite -2.2s;
+      }
+
+      .floating-card.three {
+        right: 16%;
+        bottom: 12%;
+        animation: drift 7.6s ease-in-out infinite -3.1s;
+      }
+
+      .insight-panel,
+      .workflow-panel,
+      .recent-panel,
+      .history-list-panel,
+      .history-detail-panel {
+        padding-bottom: 22px;
+      }
+
+      .feature-grid {
+        padding: 18px 24px 0;
+      }
+
+      .feature-card {
+        flex: 1 1 210px;
+        min-height: 168px;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 26, 53, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      }
+
+      .feature-card,
+      .workflow-step,
+      .session-card,
+      .history-card,
+      .history-message,
+      .stat-card {
+        transition:
+          transform var(--transition),
+          border-color var(--transition),
+          box-shadow var(--transition),
+          background var(--transition);
+      }
+
+      .feature-card:hover,
+      .workflow-step:hover,
+      .session-card:hover,
+      .history-card:hover,
+      .history-message:hover,
+      .stat-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 26, 53, 0.24);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+      }
+
+      .feature-card strong {
+        display: block;
+        font-size: 1rem;
+      }
+
+      .feature-card p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .workflow-grid {
+        padding: 18px 24px 0;
+        gap: 14px;
+        flex-direction: column;
+      }
+
+      .workflow-step {
+        display: grid;
+        grid-template-columns: 52px 1fr;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 26, 53, 0.1);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      }
+
+      .workflow-step span {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: rgba(255, 26, 53, 0.14);
+        color: #fff0f1;
         font-family: "Bebas Neue", sans-serif;
+        font-size: 1.4rem;
         letter-spacing: 0.08em;
-        font-weight: 400;
-        font-size: 2rem;
       }
 
-      .auto-analyze {
+      .workflow-step strong {
+        display: block;
+        font-size: 0.95rem;
+      }
+
+      .workflow-step p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .recent-list,
+      .history-list,
+      .history-message-list {
+        display: grid;
+        gap: 12px;
+        padding: 18px 24px 0;
+      }
+
+      .session-card,
+      .history-card {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 26, 53, 0.12);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+      }
+
+      .session-card-header,
+      .history-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .session-card strong,
+      .history-card strong {
+        display: block;
+        font-size: 0.96rem;
+        line-height: 1.5;
+      }
+
+      .session-card p,
+      .history-card p,
+      .history-meta {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .session-chip,
+      .history-chip,
+      .detail-chip {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 6px;
+        padding: 0.38rem 0.62rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        background: rgba(255, 26, 53, 0.08);
         color: var(--muted);
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .session-card-actions,
+      .history-card-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .session-inline-button,
+      .history-inline-button {
+        border: 0;
+        padding: 0;
+        background: transparent;
+        color: #ffd7dc;
         font-size: 0.78rem;
         letter-spacing: 0.04em;
       }
 
-      .auto-analyze input {
-        accent-color: var(--red-bright);
+      .workspace {
+        min-height: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(480px, 640px);
+        gap: 16px;
+      }
+
+      .workspace.sharing {
+        grid-template-columns: minmax(0, 1fr) minmax(520px, 700px);
+      }
+
+      .studio-panel {
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .studio-panel .panel-header {
+        padding-bottom: 18px;
+      }
+
+      .panel-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
       }
 
       .screen-stage {
         position: relative;
         flex: 1;
-        margin: 18px;
-        border-radius: calc(var(--radius) - 6px);
+        margin: 0 18px 18px;
+        border-radius: calc(var(--radius) - 4px);
         border: 1px solid rgba(255, 26, 53, 0.18);
         background:
-          radial-gradient(circle at center, rgba(255, 26, 53, 0.05), transparent 50%),
+          radial-gradient(circle at center, rgba(255, 26, 53, 0.08), transparent 56%),
           rgba(8, 8, 8, 0.92);
         overflow: hidden;
-        box-shadow: inset 0 0 0 1px rgba(255, 26, 53, 0.08);
       }
 
       .screen-stage.live {
         border-color: var(--line-strong);
         box-shadow:
-          inset 0 0 0 1px rgba(255, 26, 53, 0.1),
-          0 0 24px rgba(192, 0, 26, 0.22);
+          inset 0 0 0 1px rgba(255, 26, 53, 0.08),
+          0 0 26px rgba(255, 26, 53, 0.16);
+      }
+
+      .screen-stage.thinking .stage-scanline,
+      .screen-stage.live .stage-scanline {
+        opacity: 1;
       }
 
       .screen-video {
@@ -294,13 +858,86 @@
         display: block;
       }
 
+      .stage-grid-overlay,
+      .stage-scanline,
+      .stage-focus-ring {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .stage-grid-overlay {
+        background-image:
+          linear-gradient(rgba(255, 26, 53, 0.06) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 26, 53, 0.06) 1px, transparent 1px);
+        background-size: 46px 46px;
+        opacity: 0;
+        transition: opacity var(--transition);
+      }
+
+      .screen-stage:hover .stage-grid-overlay,
+      .screen-stage.live .stage-grid-overlay {
+        opacity: 0.32;
+      }
+
+      .stage-scanline {
+        opacity: 0;
+        background: linear-gradient(
+          180deg,
+          transparent 0%,
+          transparent 45%,
+          rgba(255, 26, 53, 0.16) 50%,
+          transparent 55%,
+          transparent 100%
+        );
+        transform: translateY(-100%);
+        animation: scan 4.2s linear infinite;
+      }
+
+      .stage-focus-ring {
+        inset: 18px;
+        border: 1px solid rgba(255, 26, 53, 0.14);
+        border-radius: calc(var(--radius) - 8px);
+        box-shadow: inset 0 0 40px rgba(255, 26, 53, 0.06);
+      }
+
+      .stage-status-chip {
+        position: absolute;
+        top: 18px;
+        left: 18px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0.66rem 0.88rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 26, 53, 0.16);
+        background: rgba(10, 10, 10, 0.78);
+        color: var(--muted);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        backdrop-filter: blur(10px);
+      }
+
+      .stage-status-chip::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 26, 53, 0.42);
+      }
+
+      .stage-status-chip.live::before {
+        background: var(--red-bright);
+        box-shadow: 0 0 12px rgba(255, 26, 53, 0.52);
+      }
+
       .screen-empty {
         position: absolute;
         inset: 0;
         display: grid;
         place-items: center;
-        padding: 34px;
-        text-align: center;
+        padding: 32px;
       }
 
       .screen-empty.hidden {
@@ -308,31 +945,37 @@
       }
 
       .screen-empty-card {
-        max-width: 420px;
-        padding: 34px;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 26, 53, 0.18);
-        background: rgba(20, 0, 0, 0.34);
-        box-shadow: 0 0 24px rgba(192, 0, 26, 0.12);
+        max-width: 460px;
+        padding: 32px;
+        text-align: center;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 26, 53, 0.16);
+        background: rgba(16, 8, 9, 0.8);
+        box-shadow: 0 0 26px rgba(255, 26, 53, 0.12);
       }
 
       .screen-empty-card h3 {
-        margin: 0 0 12px;
+        margin: 0;
         font-family: "Bebas Neue", sans-serif;
-        letter-spacing: 0.08em;
-        font-size: 2rem;
+        font-size: 2.2rem;
         font-weight: 400;
+        letter-spacing: 0.08em;
       }
 
       .screen-empty-card p {
-        margin: 0 0 24px;
+        margin: 12px 0 0;
         color: var(--muted);
-        line-height: 1.7;
+        line-height: 1.78;
+      }
+
+      .screen-empty-card .hero-actions {
+        justify-content: center;
       }
 
       .video-controls {
         position: absolute;
-        inset: 18px 18px auto auto;
+        top: 18px;
+        right: 18px;
         display: none;
       }
 
@@ -342,34 +985,51 @@
 
       .analyze-bar {
         position: absolute;
-        inset: auto 18px 18px 18px;
+        left: 18px;
+        right: 18px;
+        bottom: 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 14px;
         flex-wrap: wrap;
         padding: 14px 16px;
-        border-radius: 14px;
-        background: linear-gradient(180deg, rgba(19, 7, 8, 0.2), rgba(19, 7, 8, 0.75));
-        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 26, 53, 0.12);
+        background: linear-gradient(180deg, rgba(18, 10, 10, 0.46), rgba(18, 10, 10, 0.8));
+        backdrop-filter: blur(12px);
       }
 
       .screen-meta {
         color: var(--muted);
         font-size: 0.8rem;
-        line-height: 1.6;
+        line-height: 1.7;
+        max-width: 56ch;
       }
 
       .chat-panel {
-        background:
-          linear-gradient(180deg, rgba(18, 3, 5, 0.72), rgba(10, 10, 10, 0.88)),
-          var(--panel);
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .chat-summary-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .quick-actions {
+        padding: 18px 24px 0;
       }
 
       .chat-thread {
         flex: 1;
         overflow-y: auto;
-        padding: 22px;
+        padding: 18px 24px;
         display: flex;
         flex-direction: column;
         gap: 14px;
@@ -386,15 +1046,25 @@
       }
 
       .bubble {
-        max-width: min(82%, 640px);
+        max-width: min(84%, 720px);
         padding: 14px 16px;
-        border-radius: 14px;
+        border-radius: 18px;
         border: 1px solid rgba(255, 255, 255, 0.06);
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(255, 255, 255, 0.045);
         color: var(--text);
-        line-height: 1.7;
-        white-space: pre-wrap;
+        line-height: 1.75;
         word-break: break-word;
+      }
+
+      .message.user .bubble {
+        background: rgba(192, 0, 26, 0.18);
+        border-color: rgba(255, 26, 53, 0.24);
+      }
+
+      .bubble.error {
+        border-color: rgba(255, 91, 111, 0.34);
+        background: rgba(91, 10, 21, 0.46);
+        color: #ffd3d9;
       }
 
       .bubble p {
@@ -412,7 +1082,7 @@
       }
 
       .bubble strong {
-        color: #fff3f3;
+        color: #fff2f2;
         font-weight: 600;
       }
 
@@ -420,16 +1090,16 @@
         padding: 0.08rem 0.32rem;
         border-radius: 6px;
         background: rgba(255, 26, 53, 0.12);
-        border: 1px solid rgba(255, 26, 53, 0.14);
+        border: 1px solid rgba(255, 26, 53, 0.12);
       }
 
       .bubble pre {
         margin: 12px 0 0;
         padding: 14px;
-        border-radius: 12px;
         overflow-x: auto;
-        background: rgba(6, 6, 6, 0.9);
-        border: 1px solid rgba(255, 26, 53, 0.18);
+        border-radius: 12px;
+        background: rgba(6, 6, 6, 0.88);
+        border: 1px solid rgba(255, 26, 53, 0.14);
         white-space: pre;
       }
 
@@ -448,22 +1118,10 @@
         margin-top: 0.45rem;
       }
 
-      .message.user .bubble {
-        background: rgba(192, 0, 26, 0.2);
-        border-color: rgba(255, 26, 53, 0.28);
-        box-shadow: inset 0 0 0 1px rgba(255, 26, 53, 0.04);
-      }
-
-      .bubble.error {
-        border-color: rgba(255, 91, 111, 0.34);
-        background: rgba(91, 10, 21, 0.5);
-        color: #ffd3d9;
-      }
-
       .message-meta {
         display: block;
         margin-bottom: 8px;
-        color: rgba(245, 240, 235, 0.48);
+        color: rgba(245, 240, 235, 0.5);
         font-size: 0.68rem;
         text-transform: uppercase;
         letter-spacing: 0.14em;
@@ -493,20 +1151,20 @@
 
       .composer {
         border-top: 1px solid rgba(255, 26, 53, 0.12);
-        padding: 18px 22px 22px;
-        background: rgba(11, 10, 10, 0.78);
+        padding: 18px 24px 24px;
+        background: rgba(11, 10, 10, 0.76);
       }
 
       .composer textarea {
         width: 100%;
-        min-height: 104px;
+        min-height: 118px;
         resize: none;
-        border-radius: 14px;
-        border: 1px solid rgba(255, 26, 53, 0.18);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 26, 53, 0.16);
         background: rgba(12, 10, 10, 0.92);
         color: var(--text);
         padding: 16px;
-        line-height: 1.7;
+        line-height: 1.78;
       }
 
       .composer textarea::placeholder,
@@ -518,14 +1176,80 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
+        gap: 14px;
         margin-top: 14px;
+      }
+
+      .composer-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
       }
 
       .composer-note {
         color: var(--muted);
         font-size: 0.76rem;
-        line-height: 1.6;
+        line-height: 1.7;
+      }
+
+      .history-layout {
+        min-height: 100%;
+        display: grid;
+        grid-template-columns: minmax(320px, 0.85fr) minmax(0, 1.15fr);
+        gap: 18px;
+      }
+
+      .history-list {
+        max-height: calc(100vh - 220px);
+        overflow: auto;
+      }
+
+      .history-card.selected {
+        border-color: rgba(255, 26, 53, 0.32);
+        box-shadow: 0 0 24px rgba(255, 26, 53, 0.12);
+      }
+
+      .history-message-list {
+        max-height: calc(100vh - 360px);
+        overflow: auto;
+      }
+
+      .history-message {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 26, 53, 0.1);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .history-message.user {
+        border-color: rgba(255, 26, 53, 0.18);
+        background: rgba(192, 0, 26, 0.12);
+      }
+
+      .history-message p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.72;
+        white-space: pre-wrap;
+      }
+
+      .history-empty,
+      .recent-empty {
+        padding: 18px 24px 0;
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .detail-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 18px 24px 0;
+      }
+
+      .detail-chip {
+        font-size: 0.72rem;
       }
 
       .modal-backdrop {
@@ -535,52 +1259,49 @@
         align-items: center;
         justify-content: center;
         padding: 24px;
-        background: rgba(5, 4, 4, 0.72);
-        backdrop-filter: blur(14px);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity var(--transition);
+        background: rgba(5, 4, 4, 0.74);
+        backdrop-filter: blur(16px);
+        z-index: 30;
       }
 
       .modal-backdrop.open {
         display: flex;
-        opacity: 1;
-        pointer-events: auto;
+        animation: fadeIn 180ms ease both;
       }
 
       .modal {
-        width: min(460px, 100%);
-        border-radius: 22px;
+        width: min(480px, 100%);
+        border-radius: 24px;
         border: 1px solid rgba(255, 26, 53, 0.18);
-        background: linear-gradient(180deg, rgba(25, 5, 8, 0.96), rgba(10, 10, 10, 0.96));
-        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.48), 0 0 28px rgba(192, 0, 26, 0.18);
+        background: linear-gradient(180deg, rgba(25, 6, 10, 0.96), rgba(11, 10, 10, 0.96));
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42), 0 0 28px rgba(255, 26, 53, 0.14);
         overflow: hidden;
       }
 
       .modal-head {
-        padding: 22px 22px 18px;
+        padding: 24px 24px 18px;
         border-bottom: 1px solid rgba(255, 26, 53, 0.12);
       }
 
       .modal-head h3 {
-        margin: 0 0 8px;
+        margin: 0;
         font-family: "Bebas Neue", sans-serif;
-        letter-spacing: 0.08em;
+        font-size: 2.1rem;
         font-weight: 400;
-        font-size: 2rem;
+        letter-spacing: 0.08em;
       }
 
       .modal-head p,
       .helper {
-        margin: 0;
+        margin: 10px 0 0;
         color: var(--muted);
-        line-height: 1.7;
+        line-height: 1.75;
       }
 
       .modal-body {
-        padding: 22px;
         display: grid;
         gap: 18px;
+        padding: 24px;
       }
 
       .field {
@@ -598,8 +1319,8 @@
       .field input {
         width: 100%;
         padding: 0.9rem 1rem;
-        border-radius: 10px;
-        border: 1px solid rgba(255, 26, 53, 0.18);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 26, 53, 0.16);
         background: rgba(11, 10, 10, 0.94);
         color: var(--text);
       }
@@ -614,7 +1335,7 @@
         display: flex;
         justify-content: flex-end;
         gap: 10px;
-        padding: 0 22px 22px;
+        padding: 0 24px 24px;
       }
 
       .toast-stack {
@@ -627,11 +1348,11 @@
       }
 
       .toast {
-        min-width: 260px;
-        max-width: 360px;
+        min-width: 280px;
+        max-width: 380px;
         padding: 14px 16px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 26, 53, 0.28);
+        border-radius: 14px;
+        border: 1px solid rgba(255, 26, 53, 0.22);
         background: rgba(34, 7, 10, 0.92);
         box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
         color: var(--text);
@@ -663,7 +1384,7 @@
         }
         50% {
           transform: scale(1.08);
-          box-shadow: 0 0 18px rgba(255, 26, 53, 0.72);
+          box-shadow: 0 0 18px rgba(255, 26, 53, 0.7);
         }
       }
 
@@ -683,7 +1404,7 @@
       @keyframes rise {
         from {
           opacity: 0;
-          transform: translateY(10px);
+          transform: translateY(12px);
         }
         to {
           opacity: 1;
@@ -691,66 +1412,193 @@
         }
       }
 
-      @media (max-width: 980px) {
-        body {
-          overflow: auto;
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
         }
-
-        .app-shell {
-          height: auto;
-          min-height: 100vh;
-        }
-
-        .workspace {
-          grid-template-columns: 1fr;
-          grid-template-rows: minmax(420px, 52vh) minmax(420px, auto);
-        }
-
-        .topbar {
-          padding: 0 18px;
-        }
-
-        .brand {
-          gap: 12px;
-        }
-
-        .brand-status {
-          display: none;
+        to {
+          opacity: 1;
         }
       }
 
-      @media (max-width: 640px) {
-        .panel-head,
+      @keyframes viewIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes glowFloat {
+        0%,
+        100% {
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+        50% {
+          transform: translate3d(2vw, -2vh, 0) scale(1.05);
+        }
+      }
+
+      @keyframes drift {
+        0%,
+        100% {
+          transform: translateY(0) translateX(0);
+        }
+        50% {
+          transform: translateY(-10px) translateX(6px);
+        }
+      }
+
+      @keyframes spin {
+        from {
+          transform: translate(-50%, -50%) rotate(0deg);
+        }
+        to {
+          transform: translate(-50%, -50%) rotate(360deg);
+        }
+      }
+
+      @keyframes spinReverse {
+        from {
+          transform: translate(-50%, -50%) rotate(360deg);
+        }
+        to {
+          transform: translate(-50%, -50%) rotate(0deg);
+        }
+      }
+
+      @keyframes pulseRing {
+        0%,
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.04);
+        }
+      }
+
+      @keyframes scan {
+        0% {
+          transform: translateY(-100%);
+        }
+        100% {
+          transform: translateY(100%);
+        }
+      }
+
+      @media (max-width: 1180px) {
+        .app-shell {
+          width: min(100%, calc(100% - 18px));
+          min-height: 100vh;
+          padding-top: 10px;
+        }
+
+        .topbar {
+          grid-template-columns: 1fr;
+          gap: 14px;
+          padding: 14px;
+          position: static;
+        }
+
+        .nav-tabs {
+          justify-self: start;
+        }
+
+        .topbar-actions {
+          justify-content: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .view {
+          height: auto;
+          min-height: calc(100vh - 130px);
+        }
+
+        .home-grid,
+        .history-layout,
+        .workspace,
+        .hero-panel {
+          grid-template-columns: 1fr;
+        }
+
+        .history-list,
+        .history-message-list {
+          max-height: none;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .views-shell {
+          overflow: visible;
+        }
+
+        .view {
+          padding: 0;
+        }
+
+        .panel-header,
         .composer,
-        .modal-body,
         .modal-head,
+        .modal-body,
         .modal-actions {
           padding-left: 16px;
           padding-right: 16px;
         }
 
-        .workspace {
-          gap: 16px;
-          padding: 16px;
+        .screen-stage {
+          margin: 0 16px 16px;
+          min-height: 420px;
         }
 
-        .screen-stage {
-          margin: 16px;
+        .hero-copy h2 {
+          font-size: 2.3rem;
         }
 
         .composer-foot,
-        .analyze-bar {
+        .analyze-bar,
+        .hero-actions,
+        .panel-header-actions,
+        .quick-actions,
+        .history-detail-actions,
+        .session-card-actions,
+        .history-card-actions {
           flex-direction: column;
           align-items: stretch;
         }
 
+        .nav-tabs {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .nav-tab {
+          flex: 1;
+          text-align: center;
+        }
+
         .bubble {
-          max-width: 92%;
+          max-width: 94%;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .reveal {
+          opacity: 1;
+          transform: none;
+          filter: none;
+          transition: none;
         }
       }
     </style>
   </head>
   <body>
+    <canvas id="backgroundCanvas" class="background-canvas" aria-hidden="true"></canvas>
+    <div class="background-glow one" aria-hidden="true"></div>
+    <div class="background-glow two" aria-hidden="true"></div>
+
     <div class="app-shell">
       <header class="topbar">
         <div class="brand" aria-label="LENS header">
@@ -764,81 +1612,267 @@
           </div>
         </div>
 
-        <button id="openSettingsButton" class="gear-button" type="button" aria-label="Open settings">
-          ⚙
-        </button>
+        <nav class="nav-tabs" aria-label="Primary">
+          <button class="nav-tab active" type="button" data-view="home">Home</button>
+          <button class="nav-tab" type="button" data-view="studio">Studio</button>
+          <button class="nav-tab" type="button" data-view="history">History</button>
+        </nav>
+
+        <div class="topbar-actions">
+          <div id="credentialStatus" class="status-pill">Cloudflare Check</div>
+          <div id="sessionStatusPill" class="status-pill subtle">Fresh Session</div>
+          <button id="openSettingsButton" class="gear-button" type="button" aria-label="Open settings">⚙</button>
+        </div>
       </header>
 
-      <main class="workspace">
-        <section class="panel" aria-labelledby="screenPanelTitle">
-          <div class="panel-head">
-            <div>
-              <p class="panel-kicker">Screen</p>
-              <h2 id="screenPanelTitle">Live Screen Share</h2>
-            </div>
-
-            <label class="auto-analyze" for="autoAnalyzeToggle">
-              <input id="autoAnalyzeToggle" type="checkbox" />
-              <span>Auto-analyze every 10s</span>
-            </label>
-          </div>
-
-          <div id="screenStage" class="screen-stage">
-            <video id="screenVideo" class="screen-video" autoplay muted playsinline aria-label="Shared screen preview"></video>
-
-            <div id="screenEmpty" class="screen-empty">
-              <div class="screen-empty-card">
-                <h3>Share Your Screen</h3>
+      <main class="views-shell">
+        <section id="homeView" class="view active" aria-labelledby="homeViewTitle">
+          <div class="home-grid">
+            <section class="panel hero-panel">
+              <div class="hero-copy">
+                <p class="panel-kicker">Home</p>
+                <h2 id="homeViewTitle">An AI tutor for your screen.</h2>
                 <p>
-                  Put your work on the left, ask your questions on the right, and let LENS teach through whatever is on screen.
+                  Share any tab. Ask anything. Learn faster.
                 </p>
-                <button id="startSharingButton" class="primary-button" type="button">
-                  Start Sharing
-                </button>
-              </div>
-            </div>
 
-            <div id="videoControls" class="video-controls">
-              <button id="stopSharingButton" class="secondary-button" type="button">
-                Stop
-              </button>
-            </div>
+                <div class="hero-actions">
+                  <button id="homeOpenStudioButton" class="primary-button" type="button">Open Studio</button>
+                  <button id="homeNewSessionButton" class="secondary-button" type="button">Start New Session</button>
+                  <button id="homeHistoryButton" class="ghost-button" type="button">Browse History</button>
+                </div>
 
-            <div class="analyze-bar">
-              <div id="screenMeta" class="screen-meta">
-                No live screen yet. Start sharing to let LENS see what you are working on.
+                <div class="home-stat-row">
+                  <article class="stat-card">
+                    <span>Saved Sessions</span>
+                    <strong id="homeTotalSessions">0</strong>
+                  </article>
+                  <article class="stat-card">
+                    <span>User Questions</span>
+                    <strong id="homeTotalQuestions">0</strong>
+                  </article>
+                  <article class="stat-card">
+                    <span>Current Thread</span>
+                    <strong id="homeCurrentSession">Fresh Session</strong>
+                  </article>
+                </div>
               </div>
-              <button id="analyzeButton" class="primary-button" type="button">
-                Analyze Now
-              </button>
-            </div>
+
+              <div class="hero-visual" aria-hidden="true">
+                <div class="orbital-ring one"></div>
+                <div class="orbital-ring two"></div>
+                <div class="orbital-ring three"></div>
+                <div class="core-pulse"></div>
+                <div class="floating-card one">
+                  <span>Vision</span>
+                  <strong>Reads code, docs, and UI live.</strong>
+                </div>
+                <div class="floating-card two">
+                  <span>History</span>
+                  <strong>Resume any learning thread.</strong>
+                </div>
+                <div class="floating-card three">
+                  <span>Studio</span>
+                  <strong>Share. Ask. Understand.</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel insight-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Why LENS</p>
+                  <h2 class="panel-title">Learn faster, with less friction.</h2>
+                  <p class="panel-copy">Short answers, clear steps, saved context.</p>
+                </div>
+              </div>
+
+              <div class="feature-grid">
+                <article class="feature-card">
+                  <strong>All in one place</strong>
+                  <p>Home, Studio, and History in one flow.</p>
+                </article>
+                <article class="feature-card">
+                  <strong>Saved sessions</strong>
+                  <p>Jump back in anytime.</p>
+                </article>
+                <article class="feature-card">
+                  <strong>Live tutor</strong>
+                  <p>See, ask, and get guided next steps.</p>
+                </article>
+              </div>
+            </section>
+
+            <section class="panel recent-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Recent Sessions</p>
+                  <h2 class="panel-title">Continue where you left off.</h2>
+                  <p class="panel-copy">Your latest threads, ready instantly.</p>
+                </div>
+              </div>
+              <div id="homeRecentSessions" class="recent-list"></div>
+              <div id="homeRecentEmpty" class="recent-empty">No saved sessions yet. Start a thread in Studio and it will appear here.</div>
+            </section>
+
+            <section class="panel workflow-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Flow</p>
+                  <h2 class="panel-title">Three quick steps.</h2>
+                  <p class="panel-copy">Share, ask, learn.</p>
+                </div>
+              </div>
+
+              <div class="workflow-grid">
+                <article class="workflow-step">
+                  <span>01</span>
+                  <div>
+                    <strong>Share your screen.</strong>
+                    <p>Tab, window, or workspace.</p>
+                  </div>
+                </article>
+                <article class="workflow-step">
+                  <span>02</span>
+                  <div>
+                    <strong>Ask your question.</strong>
+                    <p>LENS sees your current context.</p>
+                  </div>
+                </article>
+                <article class="workflow-step">
+                  <span>03</span>
+                  <div>
+                    <strong>Keep your history.</strong>
+                    <p>Reopen any session later.</p>
+                  </div>
+                </article>
+              </div>
+            </section>
           </div>
         </section>
 
-        <section class="panel chat-panel" aria-labelledby="chatPanelTitle">
-          <div class="panel-head">
-            <div>
-              <p class="panel-kicker">LENS Tutor Chat</p>
-              <h2 id="chatPanelTitle">Ask While You Work</h2>
-            </div>
-          </div>
-
-          <div id="chatThread" class="chat-thread" aria-live="polite"></div>
-
-          <form id="chatForm" class="composer">
-            <label class="visually-hidden" for="userInput">Message LENS</label>
-            <textarea
-              id="userInput"
-              placeholder="Ask what the screen means, what the code is doing, why an error happened, or what to learn next..."
-            ></textarea>
-
-            <div class="composer-foot">
-              <div class="composer-note">
-                If screen sharing is active, LENS attaches the current frame automatically when you send.
+        <section id="studioView" class="view" aria-labelledby="studioViewTitle">
+          <div class="workspace">
+            <section class="panel studio-panel" aria-labelledby="studioViewTitle">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Studio</p>
+                  <h2 id="studioViewTitle" class="panel-title">Live Screen Tutor</h2>
+                  <p id="studioSessionSubtitle" class="panel-copy">Fresh Session</p>
+                </div>
+                <div class="panel-header-actions">
+                  <label class="status-pill subtle" for="autoAnalyzeToggle">
+                    <input id="autoAnalyzeToggle" type="checkbox" />
+                    <span>Auto analyze</span>
+                  </label>
+                  <button id="studioNewSessionButton" class="ghost-button" type="button">New Session</button>
+                </div>
               </div>
-              <button id="sendButton" class="primary-button" type="submit">Send</button>
-            </div>
-          </form>
+
+              <div id="screenStage" class="screen-stage">
+                <video id="screenVideo" class="screen-video" autoplay muted playsinline aria-label="Shared screen preview"></video>
+                <div class="stage-grid-overlay"></div>
+                <div class="stage-scanline"></div>
+                <div class="stage-focus-ring"></div>
+                <div id="stageStatusChip" class="stage-status-chip">Idle</div>
+
+                <div id="screenEmpty" class="screen-empty">
+                  <div class="screen-empty-card">
+                    <h3>Start sharing your screen</h3>
+                    <p>Then ask what you want to learn.</p>
+                    <div class="hero-actions">
+                      <button id="startSharingButton" class="primary-button" type="button">Start Sharing</button>
+                      <button id="emptyOpenHistoryButton" class="secondary-button" type="button">Open History</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="videoControls" class="video-controls">
+                  <button id="stopSharingButton" class="secondary-button" type="button">Stop</button>
+                </div>
+
+                <div class="analyze-bar">
+                  <div id="screenMeta" class="screen-meta">
+                    No live screen yet. Start sharing to let LENS see what you are working on.
+                  </div>
+                  <button id="analyzeButton" class="primary-button" type="button">Analyze Now</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel chat-panel" aria-labelledby="chatPanelTitle">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Tutor Chat</p>
+                  <h2 id="chatPanelTitle" class="panel-title">Ask While You Work</h2>
+                </div>
+                <div class="chat-summary-row">
+                  <span id="messageCountChip" class="detail-chip">1 message</span>
+                  <span id="captureStatusChip" class="detail-chip">Capture offline</span>
+                </div>
+              </div>
+
+              <div id="quickActions" class="quick-actions"></div>
+
+              <div id="chatThread" class="chat-thread" aria-live="polite"></div>
+
+              <form id="chatForm" class="composer">
+                <label class="visually-hidden" for="userInput">Message LENS</label>
+                <textarea
+                  id="userInput"
+                  placeholder="Ask what the screen means, what the code is doing, what bug signal stands out, or what to learn next..."
+                ></textarea>
+
+                <div class="composer-foot">
+                  <div class="composer-note">
+                    If sharing is active, the current frame is attached automatically so the answer stays grounded in what you are seeing.
+                  </div>
+                  <div class="composer-actions">
+                    <button id="newChatButton" class="secondary-button" type="button">New Chat</button>
+                    <button id="sendButton" class="primary-button" type="submit">Send</button>
+                  </div>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section id="historyView" class="view" aria-labelledby="historyViewTitle">
+          <div class="history-layout">
+            <section class="panel history-list-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">History</p>
+                  <h2 id="historyViewTitle" class="panel-title">Saved Sessions</h2>
+                  <p class="panel-copy">Browse your previous tutoring runs and reopen any thread in Studio.</p>
+                </div>
+                <button id="historyNewSessionButton" class="secondary-button" type="button">New Session</button>
+              </div>
+
+              <div id="historyList" class="history-list"></div>
+              <div id="historyListEmpty" class="recent-empty">No saved sessions yet. Start one in Studio to build a reusable history.</div>
+            </section>
+
+            <section class="panel history-detail-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="panel-kicker">Selected Session</p>
+                  <h2 id="historyDetailTitle" class="panel-title">Fresh Session</h2>
+                  <p id="historyDetailCopy" class="panel-copy">Pick a saved thread to inspect its messages and reopen it in Studio.</p>
+                </div>
+              </div>
+
+              <div id="historyDetailMetrics" class="detail-metrics"></div>
+
+              <div class="history-detail-actions" style="padding: 18px 24px 0">
+                <button id="historyResumeButton" class="primary-button" type="button">Open In Studio</button>
+                <button id="historyDeleteButton" class="ghost-button" type="button">Delete Session</button>
+              </div>
+
+              <div id="historyMessageList" class="history-message-list"></div>
+              <div id="historyMessageEmpty" class="recent-empty">Choose a session on the left to inspect its thread.</div>
+            </section>
+          </div>
         </section>
       </main>
     </div>
@@ -865,7 +1899,7 @@
               </div>
             </div>
 
-            <p class="helper">Nothing is sent anywhere until you choose to share your screen or send a message.</p>
+            <p class="helper">Server-side credentials are used automatically when present, but you can still override them here for another account.</p>
           </div>
 
           <div class="modal-actions">
@@ -879,19 +1913,60 @@
     <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
     <script>
-      const STORAGE_KEY = "lens.cloudflare.settings.v1";
-      const DEFAULT_ANALYZE_PROMPT = "What do you see on my screen? Teach me about it.";
+      const STORAGE_KEYS = {
+        settings: "lens.cloudflare.settings.v1",
+        sessions: "lens.sessions.v2",
+        ui: "lens.ui.v1",
+      };
+
+      const DEFAULT_ANALYZE_PROMPT =
+        "Give a short, accurate summary of only what is clearly visible on screen. Format: (1) Page summary (2) Visible evidence (exact words seen) (3) Unclear/missing parts.";
       const AUTO_ANALYZE_PROMPT =
         "Look at the current screen and tell me what the user is working on, what matters most right now, and the best thing to learn or fix next.";
+      const QUICK_ACTIONS = [
+        {
+          label: "Explain Screen",
+          prompt:
+            "Summarize only what is clearly visible on this screen in 5-7 lines. Include exact visible text and say what is unclear instead of guessing.",
+          capture: true,
+        },
+        {
+          label: "Find The Bug",
+          prompt: "Look for the strongest bug signal on this screen and tell me the most useful next debug step.",
+          capture: true,
+        },
+        {
+          label: "Teach The Code",
+          prompt: "Teach me what this code or problem is doing step by step and explain the core idea simply.",
+          capture: true,
+        },
+        {
+          label: "Plan Next Move",
+          prompt: "Based on our current thread, tell me the best next move and why it comes before the alternatives.",
+          capture: false,
+        },
+      ];
+      const WELCOME_COPY =
+        "Share your screen, ask a question, and I will guide your next step.";
+
+      let revealObserver = null;
 
       const state = {
         stream: null,
         messages: [],
         thinking: false,
+        thinkingLabel: "Thinking",
         autoAnalyze: false,
         autoTimer: null,
         serverCredentialsAvailable: false,
         settings: loadSettings(),
+        sessions: loadSessions(),
+        currentSessionId: null,
+        selectedHistoryId: null,
+        currentView: loadUiState(),
+        voice: {
+          speechSupported: false,
+        },
       };
 
       const elements = {
@@ -901,110 +1976,224 @@
         apiTokenInput: document.getElementById("apiTokenInput"),
         autoAnalyzeToggle: document.getElementById("autoAnalyzeToggle"),
         accountIdInput: document.getElementById("accountIdInput"),
+        backgroundCanvas: document.getElementById("backgroundCanvas"),
+        captureStatusChip: document.getElementById("captureStatusChip"),
         chatForm: document.getElementById("chatForm"),
         chatThread: document.getElementById("chatThread"),
         closeSettingsButton: document.getElementById("closeSettingsButton"),
+        credentialStatus: document.getElementById("credentialStatus"),
+        emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
+        historyDeleteButton: document.getElementById("historyDeleteButton"),
+        historyDetailCopy: document.getElementById("historyDetailCopy"),
+        historyDetailMetrics: document.getElementById("historyDetailMetrics"),
+        historyDetailTitle: document.getElementById("historyDetailTitle"),
+        historyList: document.getElementById("historyList"),
+        historyListEmpty: document.getElementById("historyListEmpty"),
+        historyMessageEmpty: document.getElementById("historyMessageEmpty"),
+        historyMessageList: document.getElementById("historyMessageList"),
+        historyNewSessionButton: document.getElementById("historyNewSessionButton"),
+        historyResumeButton: document.getElementById("historyResumeButton"),
+        homeCurrentSession: document.getElementById("homeCurrentSession"),
+        homeHistoryButton: document.getElementById("homeHistoryButton"),
+        homeNewSessionButton: document.getElementById("homeNewSessionButton"),
+        homeOpenStudioButton: document.getElementById("homeOpenStudioButton"),
+        homeRecentEmpty: document.getElementById("homeRecentEmpty"),
+        homeRecentSessions: document.getElementById("homeRecentSessions"),
+        homeTotalQuestions: document.getElementById("homeTotalQuestions"),
+        homeTotalSessions: document.getElementById("homeTotalSessions"),
+        messageCountChip: document.getElementById("messageCountChip"),
+        newChatButton: document.getElementById("newChatButton"),
+        navTabs: Array.from(document.querySelectorAll(".nav-tab")),
         openSettingsButton: document.getElementById("openSettingsButton"),
+        quickActions: document.getElementById("quickActions"),
         screenEmpty: document.getElementById("screenEmpty"),
         screenMeta: document.getElementById("screenMeta"),
         screenStage: document.getElementById("screenStage"),
         screenVideo: document.getElementById("screenVideo"),
         sendButton: document.getElementById("sendButton"),
+        sessionStatusPill: document.getElementById("sessionStatusPill"),
         settingsForm: document.getElementById("settingsForm"),
         settingsModal: document.getElementById("settingsModal"),
+        stageStatusChip: document.getElementById("stageStatusChip"),
         startSharingButton: document.getElementById("startSharingButton"),
         stopSharingButton: document.getElementById("stopSharingButton"),
+        studioNewSessionButton: document.getElementById("studioNewSessionButton"),
+        studioSessionSubtitle: document.getElementById("studioSessionSubtitle"),
         toggleTokenButton: document.getElementById("toggleTokenButton"),
         toastStack: document.getElementById("toastStack"),
         userInput: document.getElementById("userInput"),
         videoControls: document.getElementById("videoControls"),
+        workspace: document.querySelector("#studioView .workspace"),
+        views: {
+          home: document.getElementById("homeView"),
+          studio: document.getElementById("studioView"),
+          history: document.getElementById("historyView"),
+        },
       };
 
-      addMessage(
-        "assistant",
-        "Share your screen on the left, then ask me what you want to learn. I will look at the screen, explain what matters, and teach through the next step."
-      );
+      bootstrap();
 
-      hydrateSettingsForm();
-      renderMessages();
-      updateScreenUI();
-      void loadServerConfig();
-
-      elements.openSettingsButton.addEventListener("click", openSettings);
-      elements.closeSettingsButton.addEventListener("click", closeSettings);
-      elements.settingsModal.addEventListener("click", (event) => {
-        if (event.target === elements.settingsModal) {
-          closeSettings();
-        }
-      });
-
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          closeSettings();
-        }
-      });
-
-      elements.toggleTokenButton.addEventListener("click", () => {
-        const isPassword = elements.apiTokenInput.type === "password";
-        elements.apiTokenInput.type = isPassword ? "text" : "password";
-        elements.toggleTokenButton.textContent = isPassword ? "Hide" : "Show";
-      });
-
-      elements.settingsForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        state.settings = {
-          accountId: elements.accountIdInput.value.trim(),
-          apiToken: elements.apiTokenInput.value.trim(),
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.settings));
-        closeSettings();
-        showToast("Credentials saved locally.");
-      });
-
-      elements.startSharingButton.addEventListener("click", startScreenShare);
-      elements.stopSharingButton.addEventListener("click", stopScreenShare);
-      elements.analyzeButton.addEventListener("click", () =>
-        requestTutor(DEFAULT_ANALYZE_PROMPT, {
-          captureScreen: true,
-          showUserMessage: false,
-        })
-      );
-
-      elements.autoAnalyzeToggle.addEventListener("change", () => {
-        state.autoAnalyze = elements.autoAnalyzeToggle.checked;
-        refreshAutoAnalyze();
-      });
-
-      elements.userInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          elements.chatForm.requestSubmit();
-        }
-      });
-
-      elements.chatForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const prompt = elements.userInput.value.trim();
-        if (!prompt) {
-          showToast("Write a message before sending.", true);
-          return;
+      function bootstrap() {
+        if (state.sessions.length === 0) {
+          const session = buildNewSession();
+          state.sessions = [session];
+          state.currentSessionId = session.id;
+          state.selectedHistoryId = session.id;
+          state.messages = cloneMessages(session.messages);
+          persistSessions();
+        } else {
+          const latest = state.sessions[0];
+          state.currentSessionId = latest.id;
+          state.selectedHistoryId = latest.id;
+          state.messages = cloneMessages(latest.messages);
         }
 
-        elements.userInput.value = "";
+        hydrateSettingsForm();
+        bindEvents();
+        renderQuickActions();
+        renderAll();
+        updateScreenUI();
         autoSizeTextarea();
+        void loadServerConfig();
+        initBackgroundScene();
+        setupRevealAnimations();
+        initVoiceFeatures();
+      }
 
-        await requestTutor(prompt, {
-          captureScreen: Boolean(state.stream),
-          showUserMessage: true,
+      function bindEvents() {
+        elements.navTabs.forEach((button) => {
+          button.addEventListener("click", () => setActiveView(button.dataset.view));
         });
-      });
 
-      elements.userInput.addEventListener("input", autoSizeTextarea);
-      autoSizeTextarea();
+        elements.homeOpenStudioButton.addEventListener("click", () => setActiveView("studio"));
+        elements.homeHistoryButton.addEventListener("click", () => setActiveView("history"));
+        elements.homeNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
+        elements.studioNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
+        elements.historyNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
+        elements.emptyOpenHistoryButton.addEventListener("click", () => setActiveView("history"));
+
+        elements.openSettingsButton.addEventListener("click", openSettings);
+        elements.closeSettingsButton.addEventListener("click", closeSettings);
+        elements.settingsModal.addEventListener("click", (event) => {
+          if (event.target === elements.settingsModal) {
+            closeSettings();
+          }
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            closeSettings();
+          }
+        });
+
+        elements.toggleTokenButton.addEventListener("click", () => {
+          const isPassword = elements.apiTokenInput.type === "password";
+          elements.apiTokenInput.type = isPassword ? "text" : "password";
+          elements.toggleTokenButton.textContent = isPassword ? "Hide" : "Show";
+        });
+
+        elements.settingsForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          state.settings = {
+            accountId: elements.accountIdInput.value.trim(),
+            apiToken: elements.apiTokenInput.value.trim(),
+          };
+          localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
+          closeSettings();
+          showToast("Credentials saved locally.");
+          renderTopbarStatus();
+        });
+
+        elements.startSharingButton.addEventListener("click", startScreenShare);
+        elements.stopSharingButton.addEventListener("click", stopScreenShare);
+        elements.analyzeButton.addEventListener("click", () =>
+          requestTutor(DEFAULT_ANALYZE_PROMPT, {
+            captureScreen: true,
+            showUserMessage: false,
+          })
+        );
+
+        elements.autoAnalyzeToggle.addEventListener("change", () => {
+          state.autoAnalyze = elements.autoAnalyzeToggle.checked;
+          refreshAutoAnalyze();
+        });
+
+        elements.userInput.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            elements.chatForm.requestSubmit();
+          }
+        });
+
+        elements.userInput.addEventListener("input", autoSizeTextarea);
+        elements.newChatButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
+
+        elements.chatForm.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const prompt = elements.userInput.value.trim();
+          if (!prompt) {
+            showToast("Write a message before sending.", true);
+            return;
+          }
+
+          elements.userInput.value = "";
+          autoSizeTextarea();
+
+          await requestTutor(prompt, {
+            captureScreen: Boolean(state.stream),
+            showUserMessage: true,
+          });
+        });
+
+        elements.historyList.addEventListener("click", (event) => {
+          const target = event.target.closest("[data-session-action]");
+          if (!target) {
+            return;
+          }
+
+          const sessionId = target.dataset.sessionId;
+          if (!sessionId) {
+            return;
+          }
+
+          if (target.dataset.sessionAction === "select") {
+            state.selectedHistoryId = sessionId;
+            renderHistoryDetail();
+            renderHistoryList();
+            return;
+          }
+
+          if (target.dataset.sessionAction === "resume") {
+            loadSessionIntoStudio(sessionId);
+            return;
+          }
+        });
+
+        elements.homeRecentSessions.addEventListener("click", (event) => {
+          const target = event.target.closest("[data-home-session]");
+          if (!target) {
+            return;
+          }
+
+          loadSessionIntoStudio(target.dataset.homeSession);
+        });
+
+        elements.historyResumeButton.addEventListener("click", () => {
+          if (state.selectedHistoryId) {
+            loadSessionIntoStudio(state.selectedHistoryId);
+          }
+        });
+
+        elements.historyDeleteButton.addEventListener("click", () => {
+          if (state.selectedHistoryId) {
+            deleteSession(state.selectedHistoryId);
+          }
+        });
+      }
 
       function loadSettings() {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY);
+          const raw = localStorage.getItem(STORAGE_KEYS.settings);
           if (!raw) {
             return { accountId: "", apiToken: "" };
           }
@@ -1014,9 +2203,313 @@
             accountId: parsed.accountId || "",
             apiToken: parsed.apiToken || "",
           };
-        } catch (error) {
+        } catch {
           return { accountId: "", apiToken: "" };
         }
+      }
+
+      function loadSessions() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.sessions);
+          if (!raw) {
+            return [];
+          }
+
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            return [];
+          }
+
+          return parsed
+            .map(normalizeSession)
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+        } catch {
+          return [];
+        }
+      }
+
+      function loadUiState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.ui);
+          if (!raw) {
+            return "home";
+          }
+
+          const parsed = JSON.parse(raw);
+          return ["home", "studio", "history"].includes(parsed.currentView) ? parsed.currentView : "home";
+        } catch {
+          return "home";
+        }
+      }
+
+      function persistSessions() {
+        localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify(state.sessions));
+      }
+
+      function persistUiState() {
+        localStorage.setItem(STORAGE_KEYS.ui, JSON.stringify({ currentView: state.currentView }));
+      }
+
+      function normalizeSession(raw) {
+        if (!raw || typeof raw !== "object") {
+          return null;
+        }
+
+        const messages = Array.isArray(raw.messages)
+          ? raw.messages.map((message) => ({
+              id: typeof message.id === "string" ? message.id : createId(),
+              role: message.role === "user" || message.role === "assistant" ? message.role : "assistant",
+              content: typeof message.content === "string" ? message.content : "",
+              error: Boolean(message.error),
+              createdAt: typeof message.createdAt === "string" ? message.createdAt : new Date().toISOString(),
+            }))
+          : [createMessage("assistant", WELCOME_COPY)];
+
+        const descriptor = describeSession(messages);
+
+        return {
+          id: typeof raw.id === "string" ? raw.id : createId(),
+          title: typeof raw.title === "string" && raw.title.trim() ? raw.title : descriptor.title,
+          preview: typeof raw.preview === "string" ? raw.preview : descriptor.preview,
+          createdAt: typeof raw.createdAt === "string" ? raw.createdAt : new Date().toISOString(),
+          updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : new Date().toISOString(),
+          totalTurns: Number.isFinite(raw.totalTurns) ? raw.totalTurns : descriptor.totalTurns,
+          messages,
+        };
+      }
+
+      function createId() {
+        if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+          return crypto.randomUUID();
+        }
+
+        return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      }
+
+      function createMessage(role, content, options = {}) {
+        return {
+          id: createId(),
+          role,
+          content,
+          error: Boolean(options.error),
+          createdAt: new Date().toISOString(),
+        };
+      }
+
+      function buildNewSession() {
+        const welcome = createMessage("assistant", WELCOME_COPY);
+        const now = new Date().toISOString();
+        return {
+          id: createId(),
+          title: "Fresh Session",
+          preview: "Waiting for your first question.",
+          createdAt: now,
+          updatedAt: now,
+          totalTurns: 0,
+          messages: [welcome],
+        };
+      }
+
+      function cloneMessages(messages) {
+        return messages.map((message) => ({ ...message }));
+      }
+
+      function stripFormatting(text) {
+        return String(text || "")
+          .replace(/```[\s\S]*?```/g, " code block ")
+          .replace(/\*\*([^*]+)\*\*/g, "$1")
+          .replace(/`([^`]+)`/g, "$1")
+          .replace(/[*_>#-]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function truncate(text, maxLength) {
+        return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+      }
+
+      function formatDate(value) {
+        return new Intl.DateTimeFormat([], {
+          month: "short",
+          day: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(value));
+      }
+
+      function describeSession(messages) {
+        const cleanMessages = messages.filter((message) => !message.error);
+        const firstUser = cleanMessages.find((message) => message.role === "user");
+        const latestMessage = [...cleanMessages].reverse().find((message) => message.content);
+        const totalTurns = cleanMessages.filter((message) => message.role === "user").length;
+
+        return {
+          title: firstUser ? truncate(stripFormatting(firstUser.content), 48) : "Fresh Session",
+          preview: latestMessage ? truncate(stripFormatting(latestMessage.content), 120) : "Waiting for your first question.",
+          totalTurns,
+        };
+      }
+
+      function getCurrentSession() {
+        return state.sessions.find((session) => session.id === state.currentSessionId) || null;
+      }
+
+      function getSelectedSession() {
+        return state.sessions.find((session) => session.id === state.selectedHistoryId) || null;
+      }
+
+      function syncCurrentSession() {
+        if (!state.currentSessionId) {
+          return;
+        }
+
+        const descriptor = describeSession(state.messages);
+        const existingIndex = state.sessions.findIndex((session) => session.id === state.currentSessionId);
+        const existingSession = existingIndex >= 0 ? state.sessions[existingIndex] : null;
+        const nextSession = {
+          id: state.currentSessionId,
+          title: descriptor.title,
+          preview: descriptor.preview,
+          createdAt: existingSession ? existingSession.createdAt : new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          totalTurns: descriptor.totalTurns,
+          messages: cloneMessages(state.messages),
+        };
+
+        if (existingIndex >= 0) {
+          state.sessions.splice(existingIndex, 1);
+        }
+
+        state.sessions.unshift(nextSession);
+        state.sessions = state.sessions.slice(0, 30);
+        persistSessions();
+
+        if (!state.selectedHistoryId || state.selectedHistoryId === nextSession.id) {
+          state.selectedHistoryId = nextSession.id;
+        }
+      }
+
+      function startNewSession({ switchToStudio }) {
+        const session = buildNewSession();
+        state.currentSessionId = session.id;
+        state.selectedHistoryId = session.id;
+        state.messages = cloneMessages(session.messages);
+        state.sessions.unshift(session);
+        state.sessions = state.sessions.slice(0, 30);
+        persistSessions();
+
+        if (switchToStudio) {
+          setActiveView("studio");
+        }
+
+        elements.userInput.value = "";
+        autoSizeTextarea();
+
+        renderAll();
+        showToast("Started a fresh session.");
+      }
+
+      function loadSessionIntoStudio(sessionId) {
+        const session = state.sessions.find((entry) => entry.id === sessionId);
+        if (!session) {
+          return;
+        }
+
+        state.currentSessionId = session.id;
+        state.selectedHistoryId = session.id;
+        state.messages = cloneMessages(session.messages);
+        setActiveView("studio");
+        renderAll();
+      }
+
+      function deleteSession(sessionId) {
+        const target = state.sessions.find((session) => session.id === sessionId);
+        if (!target) {
+          return;
+        }
+
+        state.sessions = state.sessions.filter((session) => session.id !== sessionId);
+
+        if (state.sessions.length === 0) {
+          const fresh = buildNewSession();
+          state.sessions = [fresh];
+          state.currentSessionId = fresh.id;
+          state.selectedHistoryId = fresh.id;
+          state.messages = cloneMessages(fresh.messages);
+        } else {
+          const fallback = state.sessions[0];
+          state.currentSessionId = fallback.id;
+          state.selectedHistoryId = fallback.id;
+          state.messages = cloneMessages(fallback.messages);
+        }
+
+        persistSessions();
+        renderAll();
+        showToast(`Deleted "${target.title}".`);
+      }
+
+      function setActiveView(view) {
+        if (!elements.views[view]) {
+          return;
+        }
+
+        state.currentView = view;
+        persistUiState();
+        renderNavigation();
+        refreshRevealTargets();
+      }
+
+      function setupRevealAnimations() {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          return;
+        }
+
+        revealObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+
+              entry.target.classList.add("in");
+              revealObserver.unobserve(entry.target);
+            });
+          },
+          {
+            threshold: 0.12,
+            rootMargin: "0px 0px -8% 0px",
+          }
+        );
+
+        refreshRevealTargets();
+      }
+
+      function refreshRevealTargets() {
+        if (!revealObserver) {
+          return;
+        }
+
+        const targets = document.querySelectorAll(
+          ".panel, .stat-card, .feature-card, .workflow-step, .session-card, .history-card, .history-message, .screen-empty-card"
+        );
+
+        let activeIndex = 0;
+        targets.forEach((target) => {
+          if (!target.classList.contains("reveal")) {
+            target.classList.add("reveal");
+          }
+
+          const inActiveView = Boolean(target.closest(".view.active"));
+          if (!inActiveView) {
+            target.classList.remove("in");
+            return;
+          }
+
+          target.style.setProperty("--delay", `${Math.min(activeIndex, 12) * 52}ms`);
+          revealObserver.observe(target);
+          activeIndex += 1;
+        });
       }
 
       async function loadServerConfig() {
@@ -1028,8 +2521,10 @@
 
           const data = await response.json();
           state.serverCredentialsAvailable = Boolean(data.hasServerCredentials);
-        } catch (error) {
+        } catch {
           state.serverCredentialsAvailable = false;
+        } finally {
+          renderTopbarStatus();
         }
       }
 
@@ -1053,35 +2548,22 @@
 
       function autoSizeTextarea() {
         elements.userInput.style.height = "auto";
-        elements.userInput.style.height = Math.min(elements.userInput.scrollHeight, 220) + "px";
+        elements.userInput.style.height = `${Math.min(elements.userInput.scrollHeight, 240)}px`;
       }
 
       function showToast(message, isError = false) {
         const toast = document.createElement("div");
-        toast.className = "toast" + (isError ? " error" : "");
+        toast.className = `toast${isError ? " error" : ""}`;
         toast.textContent = message;
         elements.toastStack.appendChild(toast);
 
         window.setTimeout(() => {
           toast.remove();
-        }, 3400);
-      }
-
-      function createMessage(role, content, options = {}) {
-        return {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          role,
-          content,
-          error: Boolean(options.error),
-        };
-      }
-
-      function addMessage(role, content, options = {}) {
-        state.messages.push(createMessage(role, content, options));
+        }, 3600);
       }
 
       function escapeHtml(value) {
-        return value
+        return String(value || "")
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
@@ -1144,6 +2626,60 @@
         appendTextBlocks(container, value.slice(lastIndex));
       }
 
+      function renderAll() {
+        renderNavigation();
+        renderTopbarStatus();
+        renderStudioChrome();
+        renderMessages();
+        renderHomeOverview();
+        renderHistoryList();
+        renderHistoryDetail();
+        refreshRevealTargets();
+      }
+
+      function renderNavigation() {
+        Object.entries(elements.views).forEach(([viewName, node]) => {
+          node.classList.toggle("active", state.currentView === viewName);
+        });
+
+        elements.navTabs.forEach((button) => {
+          button.classList.toggle("active", button.dataset.view === state.currentView);
+        });
+      }
+
+      function renderTopbarStatus() {
+        const currentSession = getCurrentSession();
+        elements.sessionStatusPill.textContent = currentSession ? truncate(currentSession.title, 28) : "Fresh Session";
+
+        const hasBrowserCredentials = Boolean(state.settings.accountId && state.settings.apiToken);
+        if (hasBrowserCredentials) {
+          elements.credentialStatus.textContent = "Browser Credentials";
+          elements.credentialStatus.className = "status-pill live";
+          return;
+        }
+
+        if (state.serverCredentialsAvailable) {
+          elements.credentialStatus.textContent = "Server Credentials";
+          elements.credentialStatus.className = "status-pill good";
+          return;
+        }
+
+        elements.credentialStatus.textContent = "Cloudflare Needed";
+        elements.credentialStatus.className = "status-pill subtle";
+      }
+
+      function renderStudioChrome() {
+        const currentSession = getCurrentSession();
+        const title = currentSession ? currentSession.title : "Fresh Session";
+        const totalMessages = state.messages.length;
+        const captureLabel = state.stream ? "Capture live" : "Capture offline";
+
+        elements.studioSessionSubtitle.textContent = title;
+        elements.homeCurrentSession.textContent = truncate(title, 24);
+        elements.messageCountChip.textContent = `${totalMessages} ${totalMessages === 1 ? "message" : "messages"}`;
+        elements.captureStatusChip.textContent = captureLabel;
+      }
+
       function renderMessages() {
         elements.chatThread.innerHTML = "";
 
@@ -1152,7 +2688,7 @@
           row.className = `message ${message.role}`;
 
           const bubble = document.createElement("div");
-          bubble.className = "bubble" + (message.error ? " error" : "");
+          bubble.className = `bubble${message.error ? " error" : ""}`;
 
           const meta = document.createElement("span");
           meta.className = "message-meta";
@@ -1177,12 +2713,15 @@
           meta.className = "message-meta";
           meta.textContent = "LENS";
 
-          const status = document.createElement("div");
-          status.className = "typing";
-          status.setAttribute("aria-label", "LENS is thinking");
-          status.innerHTML = "<span></span><span></span><span></span>";
+          const label = document.createElement("p");
+          label.innerHTML = `<strong>${escapeHtml(state.thinkingLabel)}</strong>`;
 
-          bubble.append(meta, status);
+          const typing = document.createElement("div");
+          typing.className = "typing";
+          typing.setAttribute("aria-label", "LENS is thinking");
+          typing.innerHTML = "<span></span><span></span><span></span>";
+
+          bubble.append(meta, label, typing);
           row.appendChild(bubble);
           elements.chatThread.appendChild(row);
         }
@@ -1190,28 +2729,246 @@
         elements.chatThread.scrollTop = elements.chatThread.scrollHeight;
       }
 
-      function setThinking(nextValue) {
+      function renderQuickActions() {
+        elements.quickActions.innerHTML = "";
+
+        QUICK_ACTIONS.forEach((action) => {
+          const button = document.createElement("button");
+          button.className = "quick-button";
+          button.type = "button";
+          button.textContent = action.label;
+          button.addEventListener("click", () => {
+            requestTutor(action.prompt, {
+              captureScreen: action.capture && Boolean(state.stream),
+              showUserMessage: !action.capture || !state.stream,
+            });
+          });
+          elements.quickActions.appendChild(button);
+        });
+      }
+
+      function renderHomeOverview() {
+        const totalSessions = state.sessions.length;
+        const totalQuestions = state.sessions.reduce((count, session) => {
+          return (
+            count +
+            session.messages.filter((message) => !message.error && message.role === "user").length
+          );
+        }, 0);
+
+        elements.homeTotalSessions.textContent = String(totalSessions);
+        elements.homeTotalQuestions.textContent = String(totalQuestions);
+
+        elements.homeRecentSessions.innerHTML = "";
+        const recentSessions = state.sessions.slice(0, 3);
+        elements.homeRecentEmpty.style.display = recentSessions.length === 0 ? "block" : "none";
+
+        recentSessions.forEach((session) => {
+          const card = document.createElement("article");
+          card.className = "session-card";
+
+          const header = document.createElement("div");
+          header.className = "session-card-header";
+
+          const left = document.createElement("div");
+          const title = document.createElement("strong");
+          title.textContent = session.title;
+          const preview = document.createElement("p");
+          preview.textContent = session.preview;
+          left.append(title, preview);
+
+          const chip = document.createElement("span");
+          chip.className = "session-chip";
+          chip.textContent = formatDate(session.updatedAt);
+
+          header.append(left, chip);
+
+          const actions = document.createElement("div");
+          actions.className = "session-card-actions";
+
+          const button = document.createElement("button");
+          button.className = "session-inline-button";
+          button.type = "button";
+          button.dataset.homeSession = session.id;
+          button.textContent = "Open in Studio";
+
+          const historyButton = document.createElement("button");
+          historyButton.className = "session-inline-button";
+          historyButton.type = "button";
+          historyButton.textContent = "View in History";
+          historyButton.addEventListener("click", () => {
+            state.selectedHistoryId = session.id;
+            setActiveView("history");
+            renderHistoryList();
+            renderHistoryDetail();
+          });
+
+          actions.append(button, historyButton);
+          card.append(header, actions);
+          elements.homeRecentSessions.appendChild(card);
+        });
+      }
+
+      function renderHistoryList() {
+        elements.historyList.innerHTML = "";
+        elements.historyListEmpty.style.display = state.sessions.length === 0 ? "block" : "none";
+
+        state.sessions.forEach((session) => {
+          const card = document.createElement("article");
+          card.className = `history-card${session.id === state.selectedHistoryId ? " selected" : ""}`;
+
+          const header = document.createElement("div");
+          header.className = "history-card-header";
+
+          const titleWrap = document.createElement("div");
+          const title = document.createElement("strong");
+          title.textContent = session.title;
+          const preview = document.createElement("p");
+          preview.textContent = session.preview;
+          titleWrap.append(title, preview);
+
+          const chip = document.createElement("span");
+          chip.className = "history-chip";
+          chip.textContent = `${session.totalTurns} q`;
+
+          header.append(titleWrap, chip);
+
+          const meta = document.createElement("p");
+          meta.className = "history-meta";
+          meta.textContent = `Updated ${formatDate(session.updatedAt)}`;
+
+          const actions = document.createElement("div");
+          actions.className = "history-card-actions";
+
+          const selectButton = document.createElement("button");
+          selectButton.className = "history-inline-button";
+          selectButton.type = "button";
+          selectButton.dataset.sessionAction = "select";
+          selectButton.dataset.sessionId = session.id;
+          selectButton.textContent = "Inspect";
+
+          const resumeButton = document.createElement("button");
+          resumeButton.className = "history-inline-button";
+          resumeButton.type = "button";
+          resumeButton.dataset.sessionAction = "resume";
+          resumeButton.dataset.sessionId = session.id;
+          resumeButton.textContent = "Open";
+
+          actions.append(selectButton, resumeButton);
+          card.append(header, meta, actions);
+          elements.historyList.appendChild(card);
+        });
+      }
+
+      function renderHistoryDetail() {
+        const session = getSelectedSession();
+        elements.historyMessageList.innerHTML = "";
+
+        if (!session) {
+          elements.historyDetailTitle.textContent = "No Session Selected";
+          elements.historyDetailCopy.textContent = "Choose a saved thread on the left to inspect its conversation.";
+          elements.historyDetailMetrics.innerHTML = "";
+          elements.historyMessageEmpty.style.display = "block";
+          elements.historyResumeButton.disabled = true;
+          elements.historyDeleteButton.disabled = true;
+          return;
+        }
+
+        elements.historyResumeButton.disabled = false;
+        elements.historyDeleteButton.disabled = false;
+        elements.historyDetailTitle.textContent = session.title;
+        elements.historyDetailCopy.textContent = session.preview;
+        elements.historyMessageEmpty.style.display = session.messages.length === 0 ? "block" : "none";
+
+        const detailItems = [
+          `${session.totalTurns} questions`,
+          `Created ${formatDate(session.createdAt)}`,
+          `Updated ${formatDate(session.updatedAt)}`,
+        ];
+
+        elements.historyDetailMetrics.innerHTML = "";
+        detailItems.forEach((item) => {
+          const chip = document.createElement("span");
+          chip.className = "detail-chip";
+          chip.textContent = item;
+          elements.historyDetailMetrics.appendChild(chip);
+        });
+
+        session.messages.forEach((message) => {
+          const item = document.createElement("article");
+          item.className = `history-message ${message.role}`;
+
+          const meta = document.createElement("span");
+          meta.className = "message-meta";
+          meta.textContent = message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS";
+
+          const body = document.createElement("p");
+          body.textContent = message.content;
+
+          item.append(meta, body);
+          elements.historyMessageList.appendChild(item);
+        });
+      }
+
+      function setThinking(nextValue, label) {
         state.thinking = nextValue;
+        state.thinkingLabel = label || state.thinkingLabel;
         elements.aiDot.classList.toggle("live", nextValue);
         elements.aiStatusText.textContent = nextValue ? "Tutor Thinking" : "Tutor Ready";
         elements.sendButton.disabled = nextValue;
         elements.analyzeButton.disabled = nextValue;
+        elements.screenStage.classList.toggle("thinking", nextValue);
         renderMessages();
+        updateScreenUI();
+      }
+
+      function initVoiceFeatures() {
+        state.voice.speechSupported =
+          typeof window !== "undefined" &&
+          "speechSynthesis" in window &&
+          typeof window.SpeechSynthesisUtterance !== "undefined";
+      }
+
+      function speakAssistantReply(reply) {
+        if (!state.voice.speechSupported) {
+          return;
+        }
+
+        const clean = stripFormatting(reply);
+        if (!clean) {
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(clean);
+        utterance.rate = 1;
+        utterance.pitch = 1;
+
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
       }
 
       function hasCredentials() {
-        return Boolean(
-          (state.settings.accountId && state.settings.apiToken) ||
-          state.serverCredentialsAvailable
-        );
+        return Boolean((state.settings.accountId && state.settings.apiToken) || state.serverCredentialsAvailable);
       }
 
       function updateScreenUI() {
         const isLive = Boolean(state.stream);
+        elements.workspace?.classList.toggle("sharing", isLive);
         elements.screenStage.classList.toggle("live", isLive);
         elements.screenVideo.classList.toggle("live", isLive);
         elements.videoControls.classList.toggle("visible", isLive);
         elements.screenEmpty.classList.toggle("hidden", isLive);
+
+        if (state.thinking) {
+          elements.stageStatusChip.textContent = state.thinkingLabel;
+          elements.stageStatusChip.className = "stage-status-chip live";
+        } else if (isLive) {
+          elements.stageStatusChip.textContent = "Live Capture";
+          elements.stageStatusChip.className = "stage-status-chip live";
+        } else {
+          elements.stageStatusChip.textContent = "Idle";
+          elements.stageStatusChip.className = "stage-status-chip";
+        }
 
         if (!isLive) {
           elements.screenMeta.textContent =
@@ -1220,9 +2977,12 @@
         }
 
         const track = state.stream.getVideoTracks()[0];
-        elements.screenMeta.textContent = track && track.label
-          ? `Live source: ${track.label}`
-          : "Live source connected.";
+        const label = track && track.label ? track.label : "Live source connected.";
+        const resolution =
+          elements.screenVideo.videoWidth && elements.screenVideo.videoHeight
+            ? `${elements.screenVideo.videoWidth} × ${elements.screenVideo.videoHeight}`
+            : "awaiting dimensions";
+        elements.screenMeta.textContent = `Live source: ${label} • ${resolution}`;
       }
 
       async function startScreenShare() {
@@ -1236,14 +2996,27 @@
           const stream = await navigator.mediaDevices.getDisplayMedia({
             video: true,
             audio: false,
+            preferCurrentTab: false,
+            selfBrowserSurface: "exclude",
           });
 
           const track = stream.getVideoTracks()[0];
+          const surface = track?.getSettings?.().displaySurface;
+
+          if (surface === "browser") {
+            stream.getTracks().forEach((entry) => entry.stop());
+            throw new Error("Choose a Window or Entire Screen, not a browser tab, to avoid recursive shrinking.");
+          }
+
           if (track) {
-            track.addEventListener("ended", () => {
-              stopScreenShare();
-              showToast("Screen sharing stopped.");
-            }, { once: true });
+            track.addEventListener(
+              "ended",
+              () => {
+                stopScreenShare();
+                showToast("Screen sharing stopped.");
+              },
+              { once: true }
+            );
           }
 
           state.stream = stream;
@@ -1251,9 +3024,10 @@
           await elements.screenVideo.play().catch(() => undefined);
           updateScreenUI();
           refreshAutoAnalyze();
+          setActiveView("studio");
           showToast("Screen sharing started.");
         } catch (error) {
-          showToast(error.message || "Could not start screen sharing.", true);
+          showToast(error instanceof Error ? error.message : "Could not start screen sharing.", true);
         }
       }
 
@@ -1319,6 +3093,20 @@
           }));
       }
 
+      function isSummaryIntent(prompt) {
+        return /(summary|summari[sz]e|what\s+is\s+this\s+(website|site|page)|what\s+is\s+it\s+about|site\s+about|search\s+intent|talking\s+about)/i.test(
+          prompt
+        );
+      }
+
+      function enhancePromptForSummary(prompt) {
+        if (!isSummaryIntent(prompt)) {
+          return prompt;
+        }
+
+        return `${prompt}\n\nReturn this exact structure:\n1) Topic: one sentence about what the website/page is about.\n2) What it offers: 2-4 short bullets based only on visible content.\n3) Search intent: what the user likely searched for.\n4) Visible evidence: quote exact on-screen words/phrases.\n5) Unclear/missing: mention unreadable or cut-off parts.\nRules: no guessing, no invented brands, keep it concise.`;
+      }
+
       async function requestTutor(message, options) {
         const prompt = message.trim();
         if (!prompt) {
@@ -1341,13 +3129,15 @@
         }
 
         const history = historyForApi();
+        const enhancedPrompt = enhancePromptForSummary(prompt);
 
         if (options.showUserMessage) {
-          addMessage("user", prompt);
-          renderMessages();
+          state.messages.push(createMessage("user", prompt));
+          syncCurrentSession();
+          renderAll();
         }
 
-        setThinking(true);
+        setThinking(true, options.captureScreen ? "Analyzing Screen" : "Composing Answer");
         elements.screenMeta.textContent = options.captureScreen
           ? "Analyzing the current screen..."
           : "Thinking through your question...";
@@ -1358,14 +3148,20 @@
             apiToken: state.settings.apiToken,
             history,
             frameDataUrl,
-            userMessage: prompt,
+            userMessage: enhancedPrompt,
           });
 
-          addMessage("assistant", reply);
+          state.messages.push(createMessage("assistant", reply));
+          speakAssistantReply(reply);
+          syncCurrentSession();
         } catch (error) {
-          addMessage("assistant", error.message || "The request failed.", { error: true });
+          state.messages.push(
+            createMessage("assistant", error instanceof Error ? error.message : "The request failed.", { error: true })
+          );
+          syncCurrentSession();
         } finally {
-          setThinking(false);
+          setThinking(false, "Tutor Ready");
+          renderAll();
           updateScreenUI();
         }
       }
@@ -1388,13 +3184,13 @@
               userMessage,
             }),
           });
-        } catch (error) {
+        } catch {
           throw new Error("Could not reach the local Node server.");
         }
 
         try {
           data = await response.json();
-        } catch (error) {
+        } catch {
           throw new Error(`The local server returned status ${response.status} with an unreadable response.`);
         }
 
@@ -1403,12 +3199,101 @@
         }
 
         const reply = typeof data.reply === "string" ? data.reply.trim() : "";
-
         if (!reply) {
           throw new Error("The local server returned no tutor response.");
         }
 
         return reply;
+      }
+
+      function initBackgroundScene() {
+        const canvas = elements.backgroundCanvas;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          return;
+        }
+
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const particleCount = prefersReducedMotion ? 0 : 28;
+        let width = 0;
+        let height = 0;
+        let devicePixelRatio = 1;
+        let particles = [];
+
+        function resize() {
+          devicePixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+          width = window.innerWidth;
+          height = window.innerHeight;
+          canvas.width = Math.floor(width * devicePixelRatio);
+          canvas.height = Math.floor(height * devicePixelRatio);
+          canvas.style.width = `${width}px`;
+          canvas.style.height = `${height}px`;
+          context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+
+          particles = Array.from({ length: particleCount }, () => ({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            vx: (Math.random() - 0.5) * 0.25,
+            vy: (Math.random() - 0.5) * 0.25,
+            r: 1.2 + Math.random() * 2.2,
+          }));
+        }
+
+        function draw(time) {
+          context.clearRect(0, 0, width, height);
+
+          const gradient = context.createRadialGradient(width * 0.72, height * 0.18, 0, width * 0.72, height * 0.18, width * 0.42);
+          gradient.addColorStop(0, "rgba(255, 26, 53, 0.10)");
+          gradient.addColorStop(1, "rgba(255, 26, 53, 0)");
+          context.fillStyle = gradient;
+          context.fillRect(0, 0, width, height);
+
+          particles.forEach((particle, index) => {
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+
+            if (particle.x < -20) {
+              particle.x = width + 20;
+            } else if (particle.x > width + 20) {
+              particle.x = -20;
+            }
+
+            if (particle.y < -20) {
+              particle.y = height + 20;
+            } else if (particle.y > height + 20) {
+              particle.y = -20;
+            }
+
+            particles.slice(index + 1).forEach((other) => {
+              const dx = other.x - particle.x;
+              const dy = other.y - particle.y;
+              const distance = Math.hypot(dx, dy);
+              if (distance < 150) {
+                context.strokeStyle = `rgba(255, 26, 53, ${0.08 * (1 - distance / 150)})`;
+                context.lineWidth = 1;
+                context.beginPath();
+                context.moveTo(particle.x, particle.y);
+                context.lineTo(other.x, other.y);
+                context.stroke();
+              }
+            });
+
+            context.beginPath();
+            context.fillStyle = `rgba(255, 26, 53, ${0.16 + Math.sin(time / 1200 + index) * 0.05})`;
+            context.arc(particle.x, particle.y, particle.r, 0, Math.PI * 2);
+            context.fill();
+          });
+
+          if (!prefersReducedMotion) {
+            requestAnimationFrame(draw);
+          }
+        }
+
+        resize();
+        if (!prefersReducedMotion) {
+          requestAnimationFrame(draw);
+        }
+        window.addEventListener("resize", resize);
       }
     </script>
   </body>
