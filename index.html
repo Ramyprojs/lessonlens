@@ -14,6 +14,7 @@
       href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/dist/kokoro.web.js"></script>
     <style>
       :root {
         --bg: #0a0a14;
@@ -1123,6 +1124,18 @@
 
       .voice-stop[hidden] {
         display: none;
+      }
+
+      .voice-model-status {
+        font-size: 0.66rem;
+        letter-spacing: 0.06em;
+        color: var(--muted-soft);
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .voice-model-status.loading {
+        color: #ffd7df;
       }
 
       .ai-side {
@@ -2365,6 +2378,7 @@
                 <button id="voiceToggleButton" class="voice-toggle active" type="button">Voice On</button>
                 <button id="voiceStopButton" class="voice-stop" type="button" hidden>Stop</button>
                 <select id="voiceSelect" aria-label="Voice"></select>
+                <span id="voiceModelStatus" class="voice-model-status" hidden>Loading voice model...</span>
               </div>
 
               <div id="quickActions" class="quick-actions"></div>
@@ -2475,16 +2489,16 @@
       const WELCOME_COPY =
         "Share your screen, ask a question, and I will guide your next step.";
 
-      const VOICE_PRESETS = [
-        { id: "chatgpt", label: "ChatGPT Voice" },
-        { id: "gemini", label: "Gemini Voice" },
-        { id: "warm_female", label: "Warm Female" },
-        { id: "warm_male", label: "Warm Male" },
-        { id: "clear_female", label: "Clear Female" },
-        { id: "clear_male", label: "Clear Male" },
+      const KOKORO_VOICE_OPTIONS = [
+        { id: "af_bella", label: "Bella (Natural)" },
+        { id: "af_sarah", label: "Sarah" },
+        { id: "am_adam", label: "Adam" },
+        { id: "bf_emma", label: "Emma" },
+        { id: "bm_george", label: "George" },
       ];
 
       let revealObserver = null;
+      let screenShareInFlight = false;
 
       const state = {
         stream: null,
@@ -2507,6 +2521,8 @@
           speaking: false,
           currentMessageId: null,
           keepAliveTimer: null,
+          modelLoading: false,
+          kokoroReady: false,
         },
       };
 
@@ -2553,6 +2569,7 @@
         startSharingButton: document.getElementById("startSharingButton"),
         stopSharingButton: document.getElementById("stopSharingButton"),
         voiceSelect: document.getElementById("voiceSelect"),
+        voiceModelStatus: document.getElementById("voiceModelStatus"),
         voiceStopButton: document.getElementById("voiceStopButton"),
         voiceToggleButton: document.getElementById("voiceToggleButton"),
         studioNewSessionButton: document.getElementById("studioNewSessionButton"),
@@ -2754,7 +2771,7 @@
       }
 
       function loadSelectedVoiceName() {
-        return localStorage.getItem(STORAGE_KEYS.voiceSelected) || "";
+        return localStorage.getItem(STORAGE_KEYS.voiceSelected) || "af_bella";
       }
 
       function normalizeSession(raw) {
@@ -3553,12 +3570,12 @@
             state.voice.voices = allVoices;
           }
 
-          const validPreset = VOICE_PRESETS.some((preset) => preset.id === state.voice.selectedName);
-          if (!validPreset) {
-            state.voice.selectedName = "chatgpt";
+          const validSelection = KOKORO_VOICE_OPTIONS.some((voice) => voice.id === state.voice.selectedName);
+          if (!validSelection) {
+            state.voice.selectedName = "af_bella";
           }
 
-          state.voice.activeVoice = resolveVoiceForPreset(state.voice.selectedName) || getBestVoice();
+          state.voice.activeVoice = getBestVoice();
           localStorage.setItem(STORAGE_KEYS.voiceSelected, state.voice.selectedName);
 
           populateVoiceSelect();
@@ -3570,6 +3587,8 @@
         }
 
         hydrateVoices();
+        window.lensVoiceEnabled = state.voice.enabled;
+        void initKokoro();
       }
 
       function getBestVoice() {
@@ -3609,64 +3628,20 @@
         return goodEnglish || voices[0] || null;
       }
 
-      function resolveVoiceForPreset(presetId) {
-        const voices = state.voice.voices.length > 0 ? state.voice.voices : window.speechSynthesis.getVoices();
-        if (voices.length === 0) {
-          return null;
-        }
-
-        const preferencesByPreset = {
-          chatgpt: [
-            "Samantha",
-            "Microsoft Aria Online (Natural)",
-            "Microsoft Jenny Online (Natural)",
-            "Google US English",
-            "Google UK English Female",
-            "Karen",
-          ],
-          gemini: [
-            "Daniel",
-            "Microsoft Guy Online (Natural)",
-            "Google UK English Male",
-            "Google US English",
-            "Alex",
-          ],
-          warm_female: ["Samantha", "Karen", "Moira", "Tessa", "Microsoft Jenny Online (Natural)"],
-          warm_male: ["Daniel", "Microsoft Guy Online (Natural)", "Google UK English Male", "Alex"],
-          clear_female: ["Google US English", "Google UK English Female", "Microsoft Aria Online (Natural)"],
-          clear_male: ["Google UK English Male", "Microsoft Guy Online (Natural)", "Daniel"],
-        };
-
-        const preferredNames = preferencesByPreset[presetId] || [];
-        for (const name of preferredNames) {
-          const direct = voices.find((voice) => voice.name === name);
-          if (direct) {
-            return direct;
-          }
-
-          const partial = voices.find((voice) => voice.name.toLowerCase().includes(name.toLowerCase()));
-          if (partial) {
-            return partial;
-          }
-        }
-
-        return getBestVoice();
-      }
-
       function populateVoiceSelect() {
         if (!elements.voiceSelect) {
           return;
         }
 
         elements.voiceSelect.innerHTML = "";
-        VOICE_PRESETS.forEach((preset) => {
+        KOKORO_VOICE_OPTIONS.forEach((voice) => {
           const option = document.createElement("option");
-          option.value = preset.id;
-          option.textContent = preset.label;
+          option.value = voice.id;
+          option.textContent = voice.label;
           elements.voiceSelect.appendChild(option);
         });
 
-        elements.voiceSelect.value = state.voice.selectedName || "chatgpt";
+        elements.voiceSelect.value = state.voice.selectedName || "af_bella";
       }
 
       function refreshVoiceControls() {
@@ -3678,18 +3653,25 @@
         }
 
         if (elements.voiceSelect) {
-          elements.voiceSelect.disabled = !state.voice.speechSupported;
+          elements.voiceSelect.disabled = !state.voice.speechSupported || state.voice.modelLoading;
         }
 
         if (elements.voiceStopButton) {
           elements.voiceStopButton.hidden = !state.voice.speaking;
           elements.voiceStopButton.disabled = !state.voice.speaking;
         }
+
+        if (elements.voiceModelStatus) {
+          elements.voiceModelStatus.hidden = !state.voice.modelLoading;
+          elements.voiceModelStatus.textContent = "Loading voice model...";
+          elements.voiceModelStatus.classList.toggle("loading", state.voice.modelLoading);
+        }
       }
 
       function toggleVoiceEnabled() {
         state.voice.enabled = !state.voice.enabled;
         localStorage.setItem(STORAGE_KEYS.voiceEnabled, String(state.voice.enabled));
+        window.lensVoiceEnabled = state.voice.enabled;
 
         if (!state.voice.enabled) {
           stopSpeaking();
@@ -3699,10 +3681,9 @@
       }
 
       function onVoiceSelected(event) {
-        const selectedPreset = event.target.value;
-        state.voice.selectedName = selectedPreset;
-        localStorage.setItem(STORAGE_KEYS.voiceSelected, selectedPreset);
-        state.voice.activeVoice = resolveVoiceForPreset(selectedPreset) || state.voice.activeVoice;
+        const selectedVoice = event.target.value;
+        state.voice.selectedName = selectedVoice;
+        localStorage.setItem(STORAGE_KEYS.voiceSelected, selectedVoice);
       }
 
       function setVoiceState(nextState, messageId = null) {
@@ -3722,23 +3703,44 @@
           state.voice.keepAliveTimer = null;
         }
 
+        if (window.lensCurrentAudio) {
+          window.lensCurrentAudio.pause();
+          window.lensCurrentAudio = null;
+        }
+
         window.speechSynthesis.cancel();
         setVoiceState("idle");
       }
 
-      function getFirstSentences(text, count = 3) {
-        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-        return sentences.slice(0, count).join(" ").trim();
+      async function initKokoro() {
+        if (window.lensKokoro || state.voice.modelLoading) {
+          return;
+        }
+
+        state.voice.modelLoading = true;
+        refreshVoiceControls();
+
+        try {
+          const { KokoroTTS } = await import("https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/dist/kokoro.web.js");
+          window.lensKokoro = await KokoroTTS.from_pretrained("onnx-community/Kokoro-82M-ONNX", { dtype: "q8" });
+          state.voice.kokoroReady = true;
+        } catch (error) {
+          state.voice.kokoroReady = false;
+          console.warn("Kokoro failed to load, falling back to browser voice", error);
+        } finally {
+          state.voice.modelLoading = false;
+          refreshVoiceControls();
+        }
       }
 
-      function speakAssistantReply(reply, messageId) {
-        if (!state.voice.speechSupported || !state.voice.enabled) {
+      async function speakResponse(text, messageId) {
+        if (!window.lensVoiceEnabled) {
           return;
         }
 
         stopSpeaking();
 
-        const speakable = String(reply || "")
+        const speakable = String(text || "")
           .replace(/[#*`_~>|]/g, "")
           .replace(/https?:\/\/\S+/g, "")
           .replace(/\s+/g, " ")
@@ -3748,41 +3750,46 @@
           return;
         }
 
-        const textToSpeak = speakable.length > 500 ? `${getFirstSentences(speakable, 3)}...` : speakable;
+        const sentences = speakable.match(/[^.!?]+[.!?]+/g) || [speakable];
+        const textToSpeak = speakable.length > 500 ? sentences.slice(0, 3).join(" ") : speakable;
+
+        setVoiceState("speaking", messageId);
+
+        if (window.lensKokoro) {
+          try {
+            const audio = await window.lensKokoro.generate(textToSpeak, {
+              voice: state.voice.selectedName || "af_bella",
+            });
+
+            window.lensCurrentAudio = audio;
+            audio.play();
+            audio.onended = () => {
+              window.lensCurrentAudio = null;
+              setVoiceState("idle");
+            };
+            return;
+          } catch (error) {
+            console.warn("Kokoro speak failed, falling back", error);
+          }
+        }
 
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.voice = state.voice.activeVoice || getBestVoice();
         utterance.rate = 0.92;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-
-        utterance.onstart = () => {
-          setVoiceState("speaking", messageId);
-          state.voice.keepAliveTimer = window.setInterval(() => {
-            if (window.speechSynthesis.speaking) {
-              window.speechSynthesis.pause();
-              window.speechSynthesis.resume();
-            }
-          }, 10000);
-        };
-
-        utterance.onend = () => {
-          if (state.voice.keepAliveTimer) {
-            clearInterval(state.voice.keepAliveTimer);
-            state.voice.keepAliveTimer = null;
-          }
-          setVoiceState("idle");
-        };
-
-        utterance.onerror = () => {
-          if (state.voice.keepAliveTimer) {
-            clearInterval(state.voice.keepAliveTimer);
-            state.voice.keepAliveTimer = null;
-          }
-          setVoiceState("idle");
-        };
+        utterance.pitch = 1.0;
+        utterance.onend = () => setVoiceState("idle");
+        utterance.onerror = () => setVoiceState("idle");
 
         window.speechSynthesis.speak(utterance);
+      }
+
+      function getFirstSentences(text, count = 3) {
+        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+        return sentences.slice(0, count).join(" ").trim();
+      }
+
+      function speakAssistantReply(reply, messageId) {
+        void speakResponse(reply, messageId);
       }
 
       function hasCredentials() {
@@ -3824,11 +3831,116 @@
         elements.screenMeta.textContent = `Live source: ${label} • ${resolution}`;
       }
 
+      async function waitForVideoReady(video, timeoutMs = 12000) {
+        if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+          return true;
+        }
+
+        return await new Promise((resolve) => {
+          let settled = false;
+
+          const cleanup = () => {
+            video.removeEventListener("loadedmetadata", onReady);
+            video.removeEventListener("canplay", onReady);
+            video.removeEventListener("playing", onReady);
+            clearTimeout(timer);
+          };
+
+          const onReady = () => {
+            if (settled) {
+              return;
+            }
+
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              settled = true;
+              cleanup();
+              resolve(true);
+            }
+          };
+
+          const timer = setTimeout(() => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            resolve(false);
+          }, timeoutMs);
+
+          video.addEventListener("loadedmetadata", onReady);
+          video.addEventListener("canplay", onReady);
+          video.addEventListener("playing", onReady);
+          onReady();
+        });
+      }
+
+      async function waitForTrackReady(track, timeoutMs = 12000) {
+        if (!track) {
+          return false;
+        }
+
+        if (track.readyState === "live" && !track.muted) {
+          return true;
+        }
+
+        return await new Promise((resolve) => {
+          let settled = false;
+
+          const cleanup = () => {
+            track.removeEventListener("unmute", onReady);
+            track.removeEventListener("ended", onEnded);
+            clearTimeout(timer);
+          };
+
+          const onReady = () => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            resolve(true);
+          };
+
+          const onEnded = () => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            resolve(false);
+          };
+
+          const timer = setTimeout(() => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            cleanup();
+            resolve(track.readyState === "live");
+          }, timeoutMs);
+
+          track.addEventListener("unmute", onReady, { once: true });
+          track.addEventListener("ended", onEnded, { once: true });
+
+          if (track.readyState === "live" && !track.muted) {
+            onReady();
+          }
+        });
+      }
+
       async function startScreenShare() {
+        if (screenShareInFlight) {
+          return;
+        }
+
         try {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
             throw new Error("This browser does not support screen sharing.");
           }
+
+          screenShareInFlight = true;
+          elements.startSharingButton.disabled = true;
+          elements.startSharingButton.textContent = "Starting...";
 
           stopScreenShare();
 
@@ -3855,12 +3967,30 @@
           state.stream = stream;
           elements.screenVideo.srcObject = stream;
           await elements.screenVideo.play().catch(() => undefined);
+          const [trackReady, videoReady] = await Promise.all([
+            waitForTrackReady(track),
+            waitForVideoReady(elements.screenVideo),
+          ]);
+
           updateScreenUI();
           refreshAutoAnalyze();
           setActiveView("studio");
-          showToast("Screen sharing started.");
+
+          if (trackReady || videoReady) {
+            showToast("Screen sharing started.");
+          } else {
+            showToast("Screen sharing connected. Preview may take a moment to appear.");
+          }
         } catch (error) {
-          showToast(error instanceof Error ? error.message : "Could not start screen sharing.", true);
+          if (error instanceof Error && error.name === "AbortError") {
+            showToast("Screen sharing canceled.", true);
+          } else {
+            showToast(error instanceof Error ? error.message : "Could not start screen sharing.", true);
+          }
+        } finally {
+          screenShareInFlight = false;
+          elements.startSharingButton.disabled = false;
+          elements.startSharingButton.textContent = "Start Sharing";
         }
       }
 
@@ -3871,6 +4001,9 @@
 
         state.stream = null;
         elements.screenVideo.srcObject = null;
+        screenShareInFlight = false;
+        elements.startSharingButton.disabled = false;
+        elements.startSharingButton.textContent = "Start Sharing";
         refreshAutoAnalyze();
         updateScreenUI();
       }
