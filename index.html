@@ -1022,6 +1022,81 @@
         flex-wrap: wrap;
       }
 
+      .voice-control-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        padding: 10px 24px 0;
+      }
+
+      .voice-control-row button,
+      .voice-control-row select {
+        height: 32px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 26, 53, 0.22);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        padding: 0 10px;
+        font-size: 0.72rem;
+      }
+
+      .voice-toggle.active {
+        background: rgba(255, 26, 53, 0.16);
+        border-color: rgba(255, 26, 53, 0.42);
+        color: #ffe5e8;
+      }
+
+      .voice-stop[hidden] {
+        display: none;
+      }
+
+      .ai-side {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .voice-bars {
+        display: inline-flex;
+        align-items: flex-end;
+        gap: 2px;
+        height: 14px;
+        margin-left: 2px;
+      }
+
+      .voice-bars span {
+        width: 3px;
+        background: var(--red-bright);
+        border-radius: 2px;
+        animation: barPulse 0.8s ease-in-out infinite;
+      }
+
+      .voice-bars span:nth-child(1) {
+        animation-delay: 0s;
+        height: 6px;
+      }
+
+      .voice-bars span:nth-child(2) {
+        animation-delay: 0.15s;
+        height: 12px;
+      }
+
+      .voice-bars span:nth-child(3) {
+        animation-delay: 0.3s;
+        height: 8px;
+      }
+
+      .voice-bars span:nth-child(4) {
+        animation-delay: 0.15s;
+        height: 14px;
+      }
+
+      .voice-bars span:nth-child(5) {
+        animation-delay: 0s;
+        height: 5px;
+      }
+
       .quick-actions {
         padding: 18px 24px 0;
       }
@@ -1412,6 +1487,18 @@
         }
       }
 
+      @keyframes barPulse {
+        0%,
+        100% {
+          transform: scaleY(0.4);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scaleY(1);
+          opacity: 1;
+        }
+      }
+
       @keyframes fadeIn {
         from {
           opacity: 0;
@@ -1577,9 +1664,6 @@
       }
 
       .brand-underscore,
-      .nav-tabs,
-      #homeView,
-      #historyView,
       .quick-actions {
         display: none !important;
       }
@@ -1618,9 +1702,7 @@
         height: calc(100vh - 61px);
       }
 
-      #studioView,
-      #studioView.view.active {
-        display: block;
+      .view {
         height: 100%;
         padding: 8px;
       }
@@ -2198,6 +2280,12 @@
                 </div>
               </div>
 
+              <div class="voice-control-row">
+                <button id="voiceToggleButton" class="voice-toggle active" type="button">Voice On</button>
+                <button id="voiceStopButton" class="voice-stop" type="button" hidden>Stop</button>
+                <select id="voiceSelect" aria-label="Voice"></select>
+              </div>
+
               <div id="quickActions" class="quick-actions"></div>
 
               <div id="chatThread" class="chat-thread" aria-live="polite"></div>
@@ -2304,6 +2392,8 @@
         settings: "lens.cloudflare.settings.v1",
         sessions: "lens.sessions.v2",
         ui: "lens.ui.v1",
+        voiceEnabled: "lens_voice_enabled",
+        voiceSelected: "lens_selected_voice",
       };
 
       const DEFAULT_ANALYZE_PROMPT =
@@ -2353,6 +2443,13 @@
         currentView: loadUiState(),
         voice: {
           speechSupported: false,
+          enabled: loadVoiceEnabled(),
+          selectedName: loadSelectedVoiceName(),
+          voices: [],
+          activeVoice: null,
+          speaking: false,
+          currentMessageId: null,
+          keepAliveTimer: null,
         },
       };
 
@@ -2405,6 +2502,9 @@
         stageStatusChip: document.getElementById("stageStatusChip"),
         startSharingButton: document.getElementById("startSharingButton"),
         stopSharingButton: document.getElementById("stopSharingButton"),
+        voiceSelect: document.getElementById("voiceSelect"),
+        voiceStopButton: document.getElementById("voiceStopButton"),
+        voiceToggleButton: document.getElementById("voiceToggleButton"),
         studioNewSessionButton: document.getElementById("studioNewSessionButton"),
         studioSessionSubtitle: document.getElementById("studioSessionSubtitle"),
         toggleTokenButton: document.getElementById("toggleTokenButton"),
@@ -2435,9 +2535,6 @@
           state.selectedHistoryId = latest.id;
           state.messages = cloneMessages(latest.messages);
         }
-
-        state.currentView = "studio";
-        persistUiState();
 
         hydrateSettingsForm();
         bindEvents();
@@ -2521,6 +2618,9 @@
         elements.userInput.addEventListener("input", updateScreenAttachedChip);
         elements.newChatButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.micButton?.addEventListener("click", startMicInput);
+        elements.voiceToggleButton?.addEventListener("click", toggleVoiceEnabled);
+        elements.voiceStopButton?.addEventListener("click", stopSpeaking);
+        elements.voiceSelect?.addEventListener("change", onVoiceSelected);
 
         elements.chatForm.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -2644,6 +2744,18 @@
 
       function persistUiState() {
         localStorage.setItem(STORAGE_KEYS.ui, JSON.stringify({ currentView: state.currentView }));
+      }
+
+      function loadVoiceEnabled() {
+        const raw = localStorage.getItem(STORAGE_KEYS.voiceEnabled);
+        if (raw === null) {
+          return true;
+        }
+        return raw === "true";
+      }
+
+      function loadSelectedVoiceName() {
+        return localStorage.getItem(STORAGE_KEYS.voiceSelected) || "";
       }
 
       function normalizeSession(raw) {
@@ -2786,6 +2898,7 @@
       }
 
       function startNewSession({ switchToStudio }) {
+        stopSpeaking();
         const session = buildNewSession();
         state.currentSessionId = session.id;
         state.selectedHistoryId = session.id;
@@ -3184,10 +3297,23 @@
           bubble.className = `bubble${message.error ? " error" : ""}`;
 
           if (message.role === "assistant") {
+            const side = document.createElement("div");
+            side.className = "ai-side";
+
             const avatar = document.createElement("span");
             avatar.className = "ai-avatar";
             avatar.textContent = "L";
-            row.appendChild(avatar);
+
+            side.appendChild(avatar);
+
+            if (state.voice.speaking && state.voice.currentMessageId === message.id) {
+              const bars = document.createElement("span");
+              bars.className = "voice-bars";
+              bars.innerHTML = "<span></span><span></span><span></span><span></span><span></span>";
+              side.appendChild(bars);
+            }
+
+            row.appendChild(side);
           }
 
           const meta = document.createElement("span");
@@ -3439,23 +3565,220 @@
           typeof window !== "undefined" &&
           "speechSynthesis" in window &&
           typeof window.SpeechSynthesisUtterance !== "undefined";
+
+        if (!state.voice.speechSupported) {
+          refreshVoiceControls();
+          return;
+        }
+
+        const hydrateVoices = () => {
+          const allVoices = window.speechSynthesis.getVoices() || [];
+          state.voice.voices = allVoices.filter((voice) => /^en(-|$)/i.test(voice.lang));
+          if (state.voice.voices.length === 0) {
+            state.voice.voices = allVoices;
+          }
+
+          const selectedVoice = state.voice.voices.find((voice) => voice.name === state.voice.selectedName);
+          state.voice.activeVoice = selectedVoice || getBestVoice();
+
+          if (state.voice.activeVoice) {
+            state.voice.selectedName = state.voice.activeVoice.name;
+            localStorage.setItem(STORAGE_KEYS.voiceSelected, state.voice.selectedName);
+          }
+
+          populateVoiceSelect();
+          refreshVoiceControls();
+        };
+
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+          window.speechSynthesis.onvoiceschanged = hydrateVoices;
+        }
+
+        hydrateVoices();
       }
 
-      function speakAssistantReply(reply) {
+      function getBestVoice() {
+        const voices = state.voice.voices.length > 0 ? state.voice.voices : window.speechSynthesis.getVoices();
+        const preferred = [
+          "Samantha",
+          "Daniel",
+          "Karen",
+          "Moira",
+          "Tessa",
+          "Google US English",
+          "Google UK English Female",
+          "Google UK English Male",
+          "Microsoft Aria Online (Natural)",
+          "Microsoft Jenny Online (Natural)",
+          "Microsoft Guy Online (Natural)",
+          "Microsoft Natasha Online (Natural)",
+        ];
+
+        for (const name of preferred) {
+          const match = voices.find((voice) => voice.name === name);
+          if (match) {
+            return match;
+          }
+        }
+
+        const robotic = [
+          "Alex",
+          "Fred",
+          "Victoria",
+          "Bahh",
+          "Boing",
+          "Bubbles",
+          "Cellos",
+          "Deranged",
+          "Good News",
+          "Hysterical",
+          "Junior",
+          "Kathy",
+          "Organ",
+          "Trinoids",
+          "Whisper",
+          "Zarvox",
+        ];
+
+        const goodEnglish = voices.find(
+          (voice) => /^en(-|$)/i.test(voice.lang) && !robotic.some((name) => voice.name.includes(name))
+        );
+
+        return goodEnglish || voices[0] || null;
+      }
+
+      function populateVoiceSelect() {
+        if (!elements.voiceSelect) {
+          return;
+        }
+
+        elements.voiceSelect.innerHTML = "";
+        state.voice.voices.forEach((voice) => {
+          const option = document.createElement("option");
+          option.value = voice.name;
+          option.textContent = voice.name;
+          elements.voiceSelect.appendChild(option);
+        });
+
+        if (state.voice.selectedName) {
+          elements.voiceSelect.value = state.voice.selectedName;
+        }
+      }
+
+      function refreshVoiceControls() {
+        const enabled = state.voice.enabled && state.voice.speechSupported;
+        if (elements.voiceToggleButton) {
+          elements.voiceToggleButton.textContent = enabled ? "Voice On" : "Voice Off";
+          elements.voiceToggleButton.classList.toggle("active", enabled);
+          elements.voiceToggleButton.disabled = !state.voice.speechSupported;
+        }
+
+        if (elements.voiceSelect) {
+          elements.voiceSelect.disabled = !state.voice.speechSupported;
+        }
+
+        if (elements.voiceStopButton) {
+          elements.voiceStopButton.hidden = !state.voice.speaking;
+          elements.voiceStopButton.disabled = !state.voice.speaking;
+        }
+      }
+
+      function toggleVoiceEnabled() {
+        state.voice.enabled = !state.voice.enabled;
+        localStorage.setItem(STORAGE_KEYS.voiceEnabled, String(state.voice.enabled));
+
+        if (!state.voice.enabled) {
+          stopSpeaking();
+        }
+
+        refreshVoiceControls();
+      }
+
+      function onVoiceSelected(event) {
+        const selectedName = event.target.value;
+        state.voice.selectedName = selectedName;
+        localStorage.setItem(STORAGE_KEYS.voiceSelected, selectedName);
+        const selectedVoice = state.voice.voices.find((voice) => voice.name === selectedName);
+        state.voice.activeVoice = selectedVoice || state.voice.activeVoice;
+      }
+
+      function setVoiceState(nextState, messageId = null) {
+        state.voice.speaking = nextState === "speaking";
+        state.voice.currentMessageId = state.voice.speaking ? messageId : null;
+        refreshVoiceControls();
+        renderMessages();
+      }
+
+      function stopSpeaking() {
         if (!state.voice.speechSupported) {
           return;
         }
 
-        const clean = stripFormatting(reply);
-        if (!clean) {
+        if (state.voice.keepAliveTimer) {
+          clearInterval(state.voice.keepAliveTimer);
+          state.voice.keepAliveTimer = null;
+        }
+
+        window.speechSynthesis.cancel();
+        setVoiceState("idle");
+      }
+
+      function getFirstSentences(text, count = 3) {
+        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+        return sentences.slice(0, count).join(" ").trim();
+      }
+
+      function speakAssistantReply(reply, messageId) {
+        if (!state.voice.speechSupported || !state.voice.enabled) {
           return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(clean);
-        utterance.rate = 1;
-        utterance.pitch = 1;
+        stopSpeaking();
 
-        window.speechSynthesis.cancel();
+        const speakable = String(reply || "")
+          .replace(/[#*`_~>|]/g, "")
+          .replace(/https?:\/\/\S+/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+
+        if (!speakable) {
+          return;
+        }
+
+        const textToSpeak = speakable.length > 500 ? `${getFirstSentences(speakable, 3)}...` : speakable;
+
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.voice = state.voice.activeVoice || getBestVoice();
+        utterance.rate = 0.92;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+
+        utterance.onstart = () => {
+          setVoiceState("speaking", messageId);
+          state.voice.keepAliveTimer = window.setInterval(() => {
+            if (window.speechSynthesis.speaking) {
+              window.speechSynthesis.pause();
+              window.speechSynthesis.resume();
+            }
+          }, 10000);
+        };
+
+        utterance.onend = () => {
+          if (state.voice.keepAliveTimer) {
+            clearInterval(state.voice.keepAliveTimer);
+            state.voice.keepAliveTimer = null;
+          }
+          setVoiceState("idle");
+        };
+
+        utterance.onerror = () => {
+          if (state.voice.keepAliveTimer) {
+            clearInterval(state.voice.keepAliveTimer);
+            state.voice.keepAliveTimer = null;
+          }
+          setVoiceState("idle");
+        };
+
         window.speechSynthesis.speak(utterance);
       }
 
@@ -3514,12 +3837,6 @@
           });
 
           const track = stream.getVideoTracks()[0];
-          const surface = track?.getSettings?.().displaySurface;
-
-          if (surface === "browser") {
-            stream.getTracks().forEach((entry) => entry.stop());
-            throw new Error("Choose a Window or Entire Screen, not a browser tab, to avoid recursive shrinking.");
-          }
 
           if (track) {
             track.addEventListener(
@@ -3665,8 +3982,9 @@
           });
 
           const cleanedReply = cleanAIResponse(reply);
-          state.messages.push(createMessage("assistant", cleanedReply));
-          speakAssistantReply(cleanedReply);
+          const assistantMessage = createMessage("assistant", cleanedReply);
+          state.messages.push(assistantMessage);
+          speakAssistantReply(cleanedReply, assistantMessage.id);
           syncCurrentSession();
         } catch (error) {
           state.messages.push(
