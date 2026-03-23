@@ -2086,9 +2086,7 @@
         </nav>
 
         <div class="topbar-actions">
-          <div id="credentialStatus" class="status-pill">Cloudflare Check</div>
           <div id="sessionStatusPill" class="status-pill subtle">Fresh Session</div>
-          <button id="openSettingsButton" class="gear-button" type="button" aria-label="Open settings">⚙</button>
         </div>
       </header>
 
@@ -2352,44 +2350,21 @@
       </main>
     </div>
 
-    <div id="settingsModal" class="modal-backdrop" aria-hidden="true">
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-        <div class="modal-head">
-          <h3 id="settingsTitle">Settings</h3>
-          <p>Store your Cloudflare credentials locally in this browser so your local Node server can send screenshots and chat turns.</p>
-        </div>
 
-        <form id="settingsForm">
-          <div class="modal-body">
-            <div class="field">
-              <label for="accountIdInput">Cloudflare Account ID</label>
-              <input id="accountIdInput" name="accountId" type="text" autocomplete="off" />
-            </div>
-
-            <div class="field">
-              <label for="apiTokenInput">Cloudflare API Token</label>
-              <div class="field-row">
-                <input id="apiTokenInput" name="apiToken" type="password" autocomplete="off" />
-                <button id="toggleTokenButton" class="secondary-button" type="button">Show</button>
-              </div>
-            </div>
-
-            <p class="helper">Server-side credentials are used automatically when present, but you can still override them here for another account.</p>
-          </div>
-
-          <div class="modal-actions">
-            <button id="closeSettingsButton" class="secondary-button" type="button">Close</button>
-            <button class="primary-button" type="submit">Save</button>
-          </div>
-        </form>
-      </div>
-    </div>
 
     <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
     <script>
+      // ============================================
+      // HARDCODED CLOUDFLARE CREDENTIALS
+      // ============================================
+      // UPDATE THESE WITH YOUR CLOUDFLARE ACCOUNT ID AND API TOKEN
+      const CLOUDFLARE_CREDENTIALS = {
+        accountId: "YOUR_CLOUDFLARE_ACCOUNT_ID",
+        apiToken: "YOUR_CLOUDFLARE_API_TOKEN",
+      };
+
       const STORAGE_KEYS = {
-        settings: "lens.cloudflare.settings.v1",
         sessions: "lens.sessions.v2",
         ui: "lens.ui.v1",
         voiceEnabled: "lens_voice_enabled",
@@ -2435,8 +2410,6 @@
         thinkingLabel: "Thinking",
         autoAnalyze: false,
         autoTimer: null,
-        serverCredentialsAvailable: false,
-        settings: loadSettings(),
         sessions: loadSessions(),
         currentSessionId: null,
         selectedHistoryId: null,
@@ -2457,15 +2430,11 @@
         aiDot: document.getElementById("aiDot"),
         aiStatusText: document.getElementById("aiStatusText"),
         analyzeButton: document.getElementById("analyzeButton"),
-        apiTokenInput: document.getElementById("apiTokenInput"),
         autoAnalyzeToggle: document.getElementById("autoAnalyzeToggle"),
-        accountIdInput: document.getElementById("accountIdInput"),
         backgroundCanvas: document.getElementById("backgroundCanvas"),
         chatResizeHandle: document.getElementById("chatResizeHandle"),
         chatForm: document.getElementById("chatForm"),
         chatThread: document.getElementById("chatThread"),
-        closeSettingsButton: document.getElementById("closeSettingsButton"),
-        credentialStatus: document.getElementById("credentialStatus"),
         emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
         historyDeleteButton: document.getElementById("historyDeleteButton"),
         historyDetailCopy: document.getElementById("historyDetailCopy"),
@@ -2488,7 +2457,6 @@
         micButton: document.getElementById("micButton"),
         newChatButton: document.getElementById("newChatButton"),
         navTabs: Array.from(document.querySelectorAll(".nav-tab")),
-        openSettingsButton: document.getElementById("openSettingsButton"),
         quickActions: document.getElementById("quickActions"),
         screenEmpty: document.getElementById("screenEmpty"),
         screenMeta: document.getElementById("screenMeta"),
@@ -2496,8 +2464,6 @@
         screenVideo: document.getElementById("screenVideo"),
         sendButton: document.getElementById("sendButton"),
         sessionStatusPill: document.getElementById("sessionStatusPill"),
-        settingsForm: document.getElementById("settingsForm"),
-        settingsModal: document.getElementById("settingsModal"),
         screenAttachedChip: document.getElementById("screenAttachedChip"),
         stageStatusChip: document.getElementById("stageStatusChip"),
         startSharingButton: document.getElementById("startSharingButton"),
@@ -2507,7 +2473,6 @@
         voiceToggleButton: document.getElementById("voiceToggleButton"),
         studioNewSessionButton: document.getElementById("studioNewSessionButton"),
         studioSessionSubtitle: document.getElementById("studioSessionSubtitle"),
-        toggleTokenButton: document.getElementById("toggleTokenButton"),
         toastStack: document.getElementById("toastStack"),
         userInput: document.getElementById("userInput"),
         videoControls: document.getElementById("videoControls"),
@@ -2536,7 +2501,6 @@
           state.messages = cloneMessages(latest.messages);
         }
 
-        hydrateSettingsForm();
         bindEvents();
         renderQuickActions();
         renderAll();
@@ -2560,38 +2524,6 @@
         elements.studioNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.historyNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.emptyOpenHistoryButton.addEventListener("click", () => setActiveView("history"));
-
-        elements.openSettingsButton.addEventListener("click", openSettings);
-        elements.closeSettingsButton.addEventListener("click", closeSettings);
-        elements.settingsModal.addEventListener("click", (event) => {
-          if (event.target === elements.settingsModal) {
-            closeSettings();
-          }
-        });
-
-        document.addEventListener("keydown", (event) => {
-          if (event.key === "Escape") {
-            closeSettings();
-          }
-        });
-
-        elements.toggleTokenButton.addEventListener("click", () => {
-          const isPassword = elements.apiTokenInput.type === "password";
-          elements.apiTokenInput.type = isPassword ? "text" : "password";
-          elements.toggleTokenButton.textContent = isPassword ? "Hide" : "Show";
-        });
-
-        elements.settingsForm.addEventListener("submit", (event) => {
-          event.preventDefault();
-          state.settings = {
-            accountId: elements.accountIdInput.value.trim(),
-            apiToken: elements.apiTokenInput.value.trim(),
-          };
-          localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
-          closeSettings();
-          showToast("Credentials saved locally.");
-          renderTopbarStatus();
-        });
 
         elements.startSharingButton.addEventListener("click", startScreenShare);
         elements.stopSharingButton.addEventListener("click", stopScreenShare);
@@ -2684,23 +2616,6 @@
             deleteSession(state.selectedHistoryId);
           }
         });
-      }
-
-      function loadSettings() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEYS.settings);
-          if (!raw) {
-            return { accountId: "", apiToken: "" };
-          }
-
-          const parsed = JSON.parse(raw);
-          return {
-            accountId: parsed.accountId || "",
-            apiToken: parsed.apiToken || "",
-          };
-        } catch {
-          return { accountId: "", apiToken: "" };
-        }
       }
 
       function loadSessions() {
@@ -3021,37 +2936,7 @@
       }
 
       async function loadServerConfig() {
-        try {
-          const response = await fetch("/api/config");
-          if (!response.ok) {
-            return;
-          }
-
-          const data = await response.json();
-          state.serverCredentialsAvailable = Boolean(data.hasServerCredentials);
-        } catch {
-          state.serverCredentialsAvailable = false;
-        } finally {
-          renderTopbarStatus();
-        }
-      }
-
-      function hydrateSettingsForm() {
-        elements.accountIdInput.value = state.settings.accountId;
-        elements.apiTokenInput.value = state.settings.apiToken;
-        elements.apiTokenInput.type = "password";
-        elements.toggleTokenButton.textContent = "Show";
-      }
-
-      function openSettings() {
-        hydrateSettingsForm();
-        elements.settingsModal.classList.add("open");
-        elements.settingsModal.setAttribute("aria-hidden", "false");
-      }
-
-      function closeSettings() {
-        elements.settingsModal.classList.remove("open");
-        elements.settingsModal.setAttribute("aria-hidden", "true");
+        // Credentials are now hardcoded, no need to check server
       }
 
       function autoSizeTextarea() {
@@ -3270,12 +3155,6 @@
           elements.sessionStatusPill.textContent = "Ready";
           elements.sessionStatusPill.className = "status-pill good";
         }
-
-        const hasCredentials = Boolean(
-          (state.settings.accountId && state.settings.apiToken) || state.serverCredentialsAvailable
-        );
-        elements.credentialStatus.textContent = hasCredentials ? "Connected" : "Cloudflare Needed";
-        elements.credentialStatus.className = hasCredentials ? "status-pill good" : "status-pill subtle";
       }
 
       function renderStudioChrome() {
@@ -3783,7 +3662,9 @@
       }
 
       function hasCredentials() {
-        return Boolean((state.settings.accountId && state.settings.apiToken) || state.serverCredentialsAvailable);
+        return Boolean(CLOUDFLARE_CREDENTIALS.accountId && CLOUDFLARE_CREDENTIALS.apiToken && 
+                      CLOUDFLARE_CREDENTIALS.accountId !== "YOUR_CLOUDFLARE_ACCOUNT_ID" && 
+                      CLOUDFLARE_CREDENTIALS.apiToken !== "YOUR_CLOUDFLARE_API_TOKEN");
       }
 
       function updateScreenUI() {
@@ -3945,7 +3826,7 @@
         }
 
         if (!hasCredentials()) {
-          showToast("Please add your Cloudflare credentials in Settings ⚙", true);
+          showToast("Cloudflare credentials not configured. Please update CLOUDFLARE_CREDENTIALS in the code.", true);
           return;
         }
 
@@ -3974,8 +3855,8 @@
 
         try {
           const reply = await callLensApi({
-            accountId: state.settings.accountId,
-            apiToken: state.settings.apiToken,
+            accountId: CLOUDFLARE_CREDENTIALS.accountId,
+            apiToken: CLOUDFLARE_CREDENTIALS.apiToken,
             history,
             frameDataUrl,
             userMessage: enhancedPrompt,
