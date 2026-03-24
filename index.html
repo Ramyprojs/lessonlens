@@ -14,7 +14,6 @@
       href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script type="module" src="https://cdn.jsdelivr.net/npm/kokoro-js@1.2.0/dist/kokoro.web.js"></script>
     <style>
       :root {
         --bg: #0a0a14;
@@ -910,7 +909,7 @@
       .screen-video {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         display: none;
         background: #050505;
       }
@@ -1089,6 +1088,7 @@
         align-items: center;
         justify-content: flex-end;
         gap: 8px;
+        flex-wrap: wrap;
         padding: 10px 24px 0;
       }
 
@@ -1127,11 +1127,13 @@
       }
 
       .voice-model-status {
+        flex: 1 1 100%;
         font-size: 0.66rem;
         letter-spacing: 0.06em;
         color: var(--muted-soft);
         text-transform: uppercase;
         white-space: nowrap;
+        text-align: right;
       }
 
       .voice-model-status.loading {
@@ -1857,6 +1859,7 @@
         transition: 0.15s ease;
       }
 
+      .chat-resize-handle:focus-visible::after,
       .chat-resize-handle:hover::after {
         background: rgba(255, 154, 99, 0.92);
         opacity: 1;
@@ -2213,12 +2216,32 @@
           text-align: center;
         }
 
+        .voice-control-row {
+          justify-content: flex-start;
+        }
+
+        .voice-control-row button,
+        .voice-control-row select,
+        .voice-model-status {
+          width: 100%;
+          text-align: center;
+        }
+
         .bubble {
           max-width: 94%;
         }
       }
 
       @media (prefers-reduced-motion: reduce) {
+        .background-glow,
+        .orbital-ring,
+        .core-pulse,
+        .stage-scanline,
+        .ai-dot.live,
+        .voice-bars span {
+          animation: none !important;
+        }
+
         .reveal {
           opacity: 1;
           transform: none;
@@ -2247,7 +2270,7 @@
         </div>
 
         <nav class="nav-tabs" aria-label="Primary">
-          <button class="nav-tab active" type="button" data-view="home">Home</button>
+          <button class="nav-tab active" type="button" data-view="home" aria-current="page">Home</button>
           <button class="nav-tab" type="button" data-view="studio">Studio</button>
           <button class="nav-tab" type="button" data-view="history">History</button>
         </nav>
@@ -2432,7 +2455,15 @@
               </div>
             </section>
 
-            <div id="chatResizeHandle" class="chat-resize-handle" role="separator" aria-label="Resize chat panel" aria-orientation="vertical"></div>
+            <div
+              id="chatResizeHandle"
+              class="chat-resize-handle"
+              role="separator"
+              aria-label="Resize chat panel"
+              aria-orientation="vertical"
+              aria-valuemin="280"
+              tabindex="0"
+            ></div>
 
             <section class="panel chat-panel" aria-labelledby="chatPanelTitle">
               <div class="panel-header">
@@ -2454,7 +2485,8 @@
 
               <div id="quickActions" class="quick-actions"></div>
 
-              <div id="chatThread" class="chat-thread" aria-live="polite"></div>
+              <div id="chatThread" class="chat-thread" aria-live="off"></div>
+              <div id="chatLiveRegion" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
               <form id="chatForm" class="composer">
                 <label class="visually-hidden" for="userInput">Message LENS</label>
@@ -2525,10 +2557,15 @@
     <script>
       const STORAGE_KEYS = {
         sessions: "lens.sessions.v2",
-        ui: "lens.ui.v1",
+        ui: "lens.ui.v2",
         voiceEnabled: "lens_voice_enabled",
         voiceSelected: "lens_selected_voice",
       };
+      const DEFAULT_UI_STATE = Object.freeze({
+        currentView: "studio",
+        currentSessionId: null,
+        selectedHistoryId: null,
+      });
 
       const DEFAULT_ANALYZE_PROMPT =
         "Give a short, accurate summary of only what is clearly visible on screen. Format: (1) Page summary (2) Visible evidence (exact words seen) (3) Unclear/missing parts.";
@@ -2570,6 +2607,7 @@
 
       let revealObserver = null;
       let screenShareInFlight = false;
+      const initialUiState = loadUiState();
 
       const state = {
         stream: null,
@@ -2578,12 +2616,13 @@
         thinkingLabel: "Thinking",
         autoAnalyze: false,
         autoTimer: null,
-        serverCredentialsAvailable: false,
+        serverCredentialsAvailable: null,
         sessions: loadSessions(),
-        currentSessionId: null,
-        selectedHistoryId: null,
-        currentView: loadUiState(),
+        currentSessionId: initialUiState.currentSessionId,
+        selectedHistoryId: initialUiState.selectedHistoryId,
+        currentView: initialUiState.currentView,
         voice: {
+          browserSpeechSupported: false,
           speechSupported: false,
           enabled: loadVoiceEnabled(),
           selectedName: loadSelectedVoiceName(),
@@ -2594,6 +2633,10 @@
           keepAliveTimer: null,
           modelLoading: false,
           kokoroReady: false,
+          kokoroAttempted: false,
+          requestId: 0,
+          recognition: null,
+          listening: false,
         },
       };
 
@@ -2605,6 +2648,7 @@
         backgroundCanvas: document.getElementById("backgroundCanvas"),
         chatResizeHandle: document.getElementById("chatResizeHandle"),
         chatForm: document.getElementById("chatForm"),
+        chatLiveRegion: document.getElementById("chatLiveRegion"),
         chatThread: document.getElementById("chatThread"),
         emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
         historyDeleteButton: document.getElementById("historyDeleteButton"),
@@ -2617,6 +2661,7 @@
         historyMessageList: document.getElementById("historyMessageList"),
         historyNewSessionButton: document.getElementById("historyNewSessionButton"),
         historyResumeButton: document.getElementById("historyResumeButton"),
+        historyViewTitle: document.getElementById("historyViewTitle"),
         homeCurrentSession: document.getElementById("homeCurrentSession"),
         homeHistoryButton: document.getElementById("homeHistoryButton"),
         homeNewSessionButton: document.getElementById("homeNewSessionButton"),
@@ -2625,6 +2670,7 @@
         homeRecentSessions: document.getElementById("homeRecentSessions"),
         homeTotalQuestions: document.getElementById("homeTotalQuestions"),
         homeTotalSessions: document.getElementById("homeTotalSessions"),
+        homeViewTitle: document.getElementById("homeViewTitle"),
         micButton: document.getElementById("micButton"),
         newChatButton: document.getElementById("newChatButton"),
         navTabs: Array.from(document.querySelectorAll(".nav-tab")),
@@ -2639,6 +2685,7 @@
         stageStatusChip: document.getElementById("stageStatusChip"),
         startSharingButton: document.getElementById("startSharingButton"),
         stopSharingButton: document.getElementById("stopSharingButton"),
+        studioViewTitle: document.getElementById("studioViewTitle"),
         voiceSelect: document.getElementById("voiceSelect"),
         voiceModelStatus: document.getElementById("voiceModelStatus"),
         voiceStopButton: document.getElementById("voiceStopButton"),
@@ -2661,18 +2708,20 @@
       function bootstrap() {
         if (state.sessions.length === 0) {
           const session = buildNewSession();
-          state.sessions = [session];
           state.currentSessionId = session.id;
-          state.selectedHistoryId = session.id;
+          state.selectedHistoryId = null;
           state.messages = cloneMessages(session.messages);
-          persistSessions();
         } else {
-          const latest = state.sessions[0];
-          state.currentSessionId = latest.id;
-          state.selectedHistoryId = latest.id;
-          state.messages = cloneMessages(latest.messages);
+          const currentSession =
+            state.sessions.find((session) => session.id === state.currentSessionId) || state.sessions[0];
+          const selectedSession =
+            state.sessions.find((session) => session.id === state.selectedHistoryId) || currentSession;
+          state.currentSessionId = currentSession.id;
+          state.selectedHistoryId = selectedSession ? selectedSession.id : null;
+          state.messages = cloneMessages(currentSession.messages);
         }
 
+        persistUiState();
         bindEvents();
         renderQuickActions();
         renderAll();
@@ -2738,10 +2787,16 @@
           autoSizeTextarea();
           updateScreenAttachedChip();
 
-          await requestTutor(prompt, {
+          const result = await requestTutor(prompt, {
             captureScreen: Boolean(state.stream),
             showUserMessage: true,
           });
+
+          if (!result.accepted) {
+            elements.userInput.value = prompt;
+            autoSizeTextarea();
+            updateScreenAttachedChip();
+          }
         });
 
         elements.historyList.addEventListener("click", (event) => {
@@ -2757,6 +2812,7 @@
 
           if (target.dataset.sessionAction === "select") {
             state.selectedHistoryId = sessionId;
+            persistUiState();
             renderHistoryDetail();
             renderHistoryList();
             return;
@@ -2815,13 +2871,28 @@
         try {
           const raw = localStorage.getItem(STORAGE_KEYS.ui);
           if (!raw) {
-            return "studio";
+            return { ...DEFAULT_UI_STATE };
           }
 
           const parsed = JSON.parse(raw);
-          return ["home", "studio", "history"].includes(parsed.currentView) ? parsed.currentView : "studio";
+          const currentView =
+            parsed && typeof parsed === "object" && ["home", "studio", "history"].includes(parsed.currentView)
+              ? parsed.currentView
+              : DEFAULT_UI_STATE.currentView;
+
+          return {
+            currentView,
+            currentSessionId:
+              parsed && typeof parsed === "object" && typeof parsed.currentSessionId === "string"
+                ? parsed.currentSessionId
+                : null,
+            selectedHistoryId:
+              parsed && typeof parsed === "object" && typeof parsed.selectedHistoryId === "string"
+                ? parsed.selectedHistoryId
+                : null,
+          };
         } catch {
-          return "studio";
+          return { ...DEFAULT_UI_STATE };
         }
       }
 
@@ -2830,7 +2901,14 @@
       }
 
       function persistUiState() {
-        localStorage.setItem(STORAGE_KEYS.ui, JSON.stringify({ currentView: state.currentView }));
+        localStorage.setItem(
+          STORAGE_KEYS.ui,
+          JSON.stringify({
+            currentView: state.currentView,
+            currentSessionId: state.currentSessionId,
+            selectedHistoryId: state.selectedHistoryId,
+          })
+        );
       }
 
       function loadVoiceEnabled() {
@@ -2843,6 +2921,10 @@
 
       function loadSelectedVoiceName() {
         return localStorage.getItem(STORAGE_KEYS.voiceSelected) || "af_bella";
+      }
+
+      function supportsKokoroAudio() {
+        return typeof window !== "undefined" && typeof window.Audio !== "undefined";
       }
 
       function normalizeSession(raw) {
@@ -2946,15 +3028,46 @@
       }
 
       function getCurrentSession() {
-        return state.sessions.find((session) => session.id === state.currentSessionId) || null;
+        const existing = state.sessions.find((session) => session.id === state.currentSessionId);
+        if (existing) {
+          return existing;
+        }
+
+        if (!state.currentSessionId) {
+          return null;
+        }
+
+        const descriptor = describeSession(state.messages);
+        return {
+          id: state.currentSessionId,
+          title: descriptor.title,
+          preview: descriptor.preview,
+          createdAt: null,
+          updatedAt: null,
+          totalTurns: descriptor.totalTurns,
+          messages: cloneMessages(state.messages),
+        };
       }
 
       function getSelectedSession() {
         return state.sessions.find((session) => session.id === state.selectedHistoryId) || null;
       }
 
+      function isMeaningfulSessionMessages(messages) {
+        return messages.some(
+          (message) =>
+            message.role === "user" || message.error || stripFormatting(message.content) !== stripFormatting(WELCOME_COPY)
+        );
+      }
+
       function syncCurrentSession() {
         if (!state.currentSessionId) {
+          return;
+        }
+
+        const nextMessages = cloneMessages(state.messages);
+        if (!isMeaningfulSessionMessages(nextMessages)) {
+          persistUiState();
           return;
         }
 
@@ -2968,7 +3081,7 @@
           createdAt: existingSession ? existingSession.createdAt : new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           totalTurns: descriptor.totalTurns,
-          messages: cloneMessages(state.messages),
+          messages: nextMessages,
         };
 
         if (existingIndex >= 0) {
@@ -2982,17 +3095,18 @@
         if (!state.selectedHistoryId || state.selectedHistoryId === nextSession.id) {
           state.selectedHistoryId = nextSession.id;
         }
+
+        persistUiState();
       }
 
       function startNewSession({ switchToStudio }) {
         stopSpeaking();
         const session = buildNewSession();
         state.currentSessionId = session.id;
-        state.selectedHistoryId = session.id;
+        state.selectedHistoryId = null;
         state.messages = cloneMessages(session.messages);
-        state.sessions.unshift(session);
-        state.sessions = state.sessions.slice(0, 30);
-        persistSessions();
+        updateLiveAnnouncement("");
+        persistUiState();
 
         if (switchToStudio) {
           setActiveView("studio");
@@ -3014,6 +3128,8 @@
         state.currentSessionId = session.id;
         state.selectedHistoryId = session.id;
         state.messages = cloneMessages(session.messages);
+        updateLiveAnnouncement("");
+        persistUiState();
         setActiveView("studio");
         renderAll();
       }
@@ -3025,26 +3141,51 @@
         }
 
         state.sessions = state.sessions.filter((session) => session.id !== sessionId);
+        const deletedCurrentSession = state.currentSessionId === sessionId;
+        const deletedSelectedSession = state.selectedHistoryId === sessionId;
 
-        if (state.sessions.length === 0) {
-          const fresh = buildNewSession();
-          state.sessions = [fresh];
-          state.currentSessionId = fresh.id;
-          state.selectedHistoryId = fresh.id;
-          state.messages = cloneMessages(fresh.messages);
-        } else {
-          const fallback = state.sessions[0];
-          state.currentSessionId = fallback.id;
-          state.selectedHistoryId = fallback.id;
-          state.messages = cloneMessages(fallback.messages);
+        if (deletedCurrentSession) {
+          if (state.sessions.length === 0) {
+            const fresh = buildNewSession();
+            state.currentSessionId = fresh.id;
+            state.messages = cloneMessages(fresh.messages);
+          } else {
+            const fallback = state.sessions[0];
+            state.currentSessionId = fallback.id;
+            state.messages = cloneMessages(fallback.messages);
+          }
+        }
+
+        if (deletedSelectedSession) {
+          state.selectedHistoryId = state.sessions[0] ? state.sessions[0].id : null;
         }
 
         persistSessions();
+        persistUiState();
+        updateLiveAnnouncement("");
         renderAll();
         showToast(`Deleted "${target.title}".`);
       }
 
-      function setActiveView(view) {
+      function moveFocusToView(view) {
+        const focusTargets = {
+          home: elements.homeViewTitle,
+          studio: elements.userInput,
+          history: elements.historyViewTitle,
+        };
+        const target = focusTargets[view];
+        if (!target || typeof target.focus !== "function") {
+          return;
+        }
+
+        if (target !== elements.userInput && !target.hasAttribute("tabindex")) {
+          target.setAttribute("tabindex", "-1");
+        }
+
+        target.focus({ preventScroll: view !== "studio" });
+      }
+
+      function setActiveView(view, options = {}) {
         if (!elements.views[view]) {
           return;
         }
@@ -3053,6 +3194,10 @@
         persistUiState();
         renderNavigation();
         refreshRevealTargets();
+
+        if (options.focus !== false) {
+          requestAnimationFrame(() => moveFocusToView(view));
+        }
       }
 
       function setupRevealAnimations() {
@@ -3158,26 +3303,67 @@
         elements.screenAttachedChip.hidden = !attached;
       }
 
+      function refreshMicButton() {
+        if (!elements.micButton) {
+          return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const supported = typeof SpeechRecognition !== "undefined";
+        elements.micButton.disabled = !supported;
+        elements.micButton.textContent = state.voice.listening ? "Stop Mic" : "Mic";
+        elements.micButton.setAttribute("aria-pressed", state.voice.listening ? "true" : "false");
+      }
+
       function startMicInput() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
           showToast("Voice input is not supported in this browser.", true);
+          refreshMicButton();
+          return;
+        }
+
+        if (state.voice.listening && state.voice.recognition) {
+          try {
+            state.voice.recognition.stop();
+          } catch {
+            showToast("Could not stop microphone input.", true);
+          }
           return;
         }
 
         try {
           const recognition = new SpeechRecognition();
+          state.voice.recognition = recognition;
+          state.voice.listening = true;
+          refreshMicButton();
           recognition.lang = "en-US";
           recognition.interimResults = false;
           recognition.maxAlternatives = 1;
+
+          const resetRecognition = () => {
+            state.voice.recognition = null;
+            state.voice.listening = false;
+            refreshMicButton();
+          };
+
           recognition.onresult = (event) => {
             const text = event.results?.[0]?.[0]?.transcript || "";
             elements.userInput.value = `${elements.userInput.value} ${text}`.trim();
             autoSizeTextarea();
           };
-          recognition.onerror = () => showToast("Mic capture failed.", true);
+          recognition.onerror = (event) => {
+            if (event?.error !== "aborted") {
+              showToast("Mic capture failed.", true);
+            }
+            resetRecognition();
+          };
+          recognition.onend = resetRecognition;
           recognition.start();
         } catch {
+          state.voice.recognition = null;
+          state.voice.listening = false;
+          refreshMicButton();
           showToast("Could not start microphone input.", true);
         }
       }
@@ -3190,29 +3376,68 @@
         }
 
         const storageKey = "lens.chat.width.v1";
+        const minWidth = 280;
+
+        const getMaxWidth = () => {
+          const maxVw = window.innerWidth * 0.55;
+          const maxBySpace = Math.max(minWidth, workspace.clientWidth - 400 - 6);
+          return Math.max(minWidth, Math.min(maxVw, maxBySpace));
+        };
 
         const clampWidth = (width) => {
-          const min = 280;
-          const maxVw = window.innerWidth * 0.55;
-          const maxBySpace = Math.max(min, workspace.clientWidth - 400 - 6);
-          return Math.max(min, Math.min(width, maxVw, maxBySpace));
+          return Math.max(minWidth, Math.min(width, getMaxWidth()));
+        };
+
+        const getCurrentWidth = () => {
+          const panelWidth = elements.chatThread?.closest(".chat-panel")?.getBoundingClientRect().width;
+          if (Number.isFinite(panelWidth) && panelWidth > 0) {
+            return panelWidth;
+          }
+
+          const rawValue = getComputedStyle(workspace).getPropertyValue("--chat-panel-width").trim();
+          if (rawValue.endsWith("px")) {
+            const current = parseFloat(rawValue);
+            if (Number.isFinite(current) && current > 0) {
+              return current;
+            }
+          }
+
+          if (rawValue.endsWith("vw")) {
+            const current = (parseFloat(rawValue) / 100) * window.innerWidth;
+            if (Number.isFinite(current) && current > 0) {
+              return current;
+            }
+          }
+
+          return minWidth;
+        };
+
+        const syncHandleMetrics = (width) => {
+          const clamped = Math.round(clampWidth(width));
+          handle.setAttribute("aria-valuemin", String(minWidth));
+          handle.setAttribute("aria-valuemax", String(Math.round(getMaxWidth())));
+          handle.setAttribute("aria-valuenow", String(clamped));
+          handle.setAttribute("aria-valuetext", `Chat panel width ${clamped} pixels`);
         };
 
         const setWidth = (width) => {
           const clamped = clampWidth(width);
           workspace.style.setProperty("--chat-panel-width", `${clamped}px`);
           localStorage.setItem(storageKey, String(Math.round(clamped)));
+          syncHandleMetrics(clamped);
         };
 
         const saved = Number(localStorage.getItem(storageKey));
         if (Number.isFinite(saved) && saved > 0) {
           setWidth(saved);
+        } else {
+          syncHandleMetrics(getCurrentWidth());
         }
 
-        let active = false;
+        let activePointerId = null;
 
         const onMove = (event) => {
-          if (!active) {
+          if (activePointerId === null || event.pointerId !== activePointerId) {
             return;
           }
 
@@ -3222,27 +3447,46 @@
         };
 
         const onUp = () => {
-          active = false;
+          activePointerId = null;
           document.body.style.cursor = "";
           document.body.style.userSelect = "";
-          window.removeEventListener("mousemove", onMove);
-          window.removeEventListener("mouseup", onUp);
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", onUp);
+          window.removeEventListener("pointercancel", onUp);
         };
 
-        handle.addEventListener("mousedown", (event) => {
-          active = true;
+        handle.addEventListener("pointerdown", (event) => {
+          activePointerId = event.pointerId;
           document.body.style.cursor = "col-resize";
           document.body.style.userSelect = "none";
-          window.addEventListener("mousemove", onMove);
-          window.addEventListener("mouseup", onUp);
+          handle.setPointerCapture?.(event.pointerId);
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", onUp);
+          window.addEventListener("pointercancel", onUp);
           event.preventDefault();
         });
 
-        window.addEventListener("resize", () => {
-          const current = parseFloat(getComputedStyle(workspace).getPropertyValue("--chat-panel-width"));
-          if (Number.isFinite(current) && current > 0) {
-            setWidth(current);
+        handle.addEventListener("keydown", (event) => {
+          const current = getCurrentWidth();
+          const step = event.shiftKey ? 64 : 24;
+
+          if (event.key === "ArrowLeft") {
+            setWidth(current - step);
+            event.preventDefault();
+          } else if (event.key === "ArrowRight") {
+            setWidth(current + step);
+            event.preventDefault();
+          } else if (event.key === "Home") {
+            setWidth(minWidth);
+            event.preventDefault();
+          } else if (event.key === "End") {
+            setWidth(getMaxWidth());
+            event.preventDefault();
           }
+        });
+
+        window.addEventListener("resize", () => {
+          setWidth(getCurrentWidth());
         });
       }
 
@@ -3327,7 +3571,13 @@
         });
 
         elements.navTabs.forEach((button) => {
-          button.classList.toggle("active", button.dataset.view === state.currentView);
+          const isActive = button.dataset.view === state.currentView;
+          button.classList.toggle("active", isActive);
+          if (isActive) {
+            button.setAttribute("aria-current", "page");
+          } else {
+            button.removeAttribute("aria-current");
+          }
         });
       }
 
@@ -3430,6 +3680,21 @@
         elements.chatThread.scrollTop = elements.chatThread.scrollHeight;
       }
 
+      function updateLiveAnnouncement(message) {
+        if (!elements.chatLiveRegion) {
+          return;
+        }
+
+        elements.chatLiveRegion.textContent = "";
+        if (!message) {
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          elements.chatLiveRegion.textContent = message;
+        });
+      }
+
       function renderQuickActions() {
         elements.quickActions.innerHTML = "";
 
@@ -3499,6 +3764,7 @@
           historyButton.textContent = "View in History";
           historyButton.addEventListener("click", () => {
             state.selectedHistoryId = session.id;
+            persistUiState();
             setActiveView("history");
             renderHistoryList();
             renderHistoryDetail();
@@ -3624,17 +3890,21 @@
       }
 
       function initVoiceFeatures() {
-        state.voice.speechSupported =
+        state.voice.browserSpeechSupported =
           typeof window !== "undefined" &&
           "speechSynthesis" in window &&
           typeof window.SpeechSynthesisUtterance !== "undefined";
-
-        if (!state.voice.speechSupported) {
-          refreshVoiceControls();
-          return;
-        }
+        state.voice.speechSupported = state.voice.browserSpeechSupported || supportsKokoroAudio();
 
         const hydrateVoices = () => {
+          if (!state.voice.browserSpeechSupported) {
+            state.voice.voices = [];
+            state.voice.activeVoice = null;
+            populateVoiceSelect();
+            refreshVoiceControls();
+            return;
+          }
+
           const allVoices = window.speechSynthesis.getVoices() || [];
           state.voice.voices = allVoices.filter((voice) => /^en(-|$)/i.test(voice.lang));
           if (state.voice.voices.length === 0) {
@@ -3653,16 +3923,20 @@
           refreshVoiceControls();
         };
 
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        if (state.voice.browserSpeechSupported && window.speechSynthesis.onvoiceschanged !== undefined) {
           window.speechSynthesis.onvoiceschanged = hydrateVoices;
         }
 
         hydrateVoices();
         window.lensVoiceEnabled = state.voice.enabled;
-        void initKokoro();
+        refreshMicButton();
       }
 
       function getBestVoice() {
+        if (!state.voice.browserSpeechSupported) {
+          return null;
+        }
+
         const voices = state.voice.voices.length > 0 ? state.voice.voices : window.speechSynthesis.getVoices();
         const preferred = ["Samantha", "Daniel", "Karen", "Moira", "Tessa", "Google US English"];
 
@@ -3724,7 +3998,7 @@
         }
 
         if (elements.voiceSelect) {
-          elements.voiceSelect.disabled = !state.voice.speechSupported || state.voice.modelLoading;
+          elements.voiceSelect.disabled = !enabled || state.voice.modelLoading || !state.voice.kokoroReady;
         }
 
         if (elements.voiceStopButton) {
@@ -3733,10 +4007,21 @@
         }
 
         if (elements.voiceModelStatus) {
-          elements.voiceModelStatus.hidden = !state.voice.modelLoading;
-          elements.voiceModelStatus.textContent = "Loading voice model...";
+          let statusMessage = "";
+          if (state.voice.modelLoading) {
+            statusMessage = "Loading voice model...";
+          } else if (enabled && !state.voice.kokoroReady && state.voice.browserSpeechSupported) {
+            statusMessage = "Browser voice fallback";
+          } else if (enabled && !state.voice.kokoroReady && state.voice.speechSupported) {
+            statusMessage = "Voice model loads on first reply";
+          }
+
+          elements.voiceModelStatus.hidden = !statusMessage;
+          elements.voiceModelStatus.textContent = statusMessage;
           elements.voiceModelStatus.classList.toggle("loading", state.voice.modelLoading);
         }
+
+        refreshMicButton();
       }
 
       function toggleVoiceEnabled() {
@@ -3746,6 +4031,8 @@
 
         if (!state.voice.enabled) {
           stopSpeaking();
+        } else if (!state.voice.kokoroReady && !state.voice.modelLoading && !state.voice.kokoroAttempted) {
+          void initKokoro();
         }
 
         refreshVoiceControls();
@@ -3765,9 +4052,7 @@
       }
 
       function stopSpeaking() {
-        if (!state.voice.speechSupported) {
-          return;
-        }
+        state.voice.requestId += 1;
 
         if (state.voice.keepAliveTimer) {
           clearInterval(state.voice.keepAliveTimer);
@@ -3775,19 +4060,25 @@
         }
 
         if (window.lensCurrentAudio) {
+          window.lensCurrentAudio.onended = null;
+          window.lensCurrentAudio.onerror = null;
           window.lensCurrentAudio.pause();
+          window.lensCurrentAudio.currentTime = 0;
           window.lensCurrentAudio = null;
         }
 
-        window.speechSynthesis.cancel();
+        if (state.voice.browserSpeechSupported) {
+          window.speechSynthesis.cancel();
+        }
         setVoiceState("idle");
       }
 
       async function initKokoro() {
-        if (window.lensKokoro || state.voice.modelLoading) {
+        if (window.lensKokoro || state.voice.modelLoading || state.voice.kokoroAttempted || !supportsKokoroAudio()) {
           return;
         }
 
+        state.voice.kokoroAttempted = true;
         state.voice.modelLoading = true;
         refreshVoiceControls();
 
@@ -3805,11 +4096,12 @@
       }
 
       async function speakResponse(text, messageId) {
-        if (!window.lensVoiceEnabled) {
+        if (!window.lensVoiceEnabled || !state.voice.speechSupported) {
           return;
         }
 
         stopSpeaking();
+        const requestId = state.voice.requestId;
 
         const speakable = String(text || "")
           .replace(/[#*`_~>|]/g, "")
@@ -3826,30 +4118,70 @@
 
         setVoiceState("speaking", messageId);
 
+        if (!window.lensKokoro && !state.voice.kokoroReady && !state.voice.modelLoading && !state.voice.kokoroAttempted) {
+          if (state.voice.browserSpeechSupported) {
+            void initKokoro();
+          } else {
+            await initKokoro();
+          }
+        }
+
         if (window.lensKokoro) {
           try {
             const audio = await window.lensKokoro.generate(textToSpeak, {
               voice: state.voice.selectedName || "af_bella",
             });
 
+            if (requestId !== state.voice.requestId || !state.voice.enabled) {
+              audio.pause?.();
+              setVoiceState("idle");
+              return;
+            }
+
             window.lensCurrentAudio = audio;
-            audio.play();
             audio.onended = () => {
+              if (requestId !== state.voice.requestId) {
+                return;
+              }
               window.lensCurrentAudio = null;
               setVoiceState("idle");
             };
+            audio.onerror = () => {
+              if (requestId !== state.voice.requestId) {
+                return;
+              }
+              window.lensCurrentAudio = null;
+              setVoiceState("idle");
+            };
+            await audio.play();
             return;
           } catch (error) {
+            if (requestId !== state.voice.requestId) {
+              return;
+            }
             console.warn("Kokoro speak failed, falling back", error);
           }
+        }
+
+        if (!state.voice.browserSpeechSupported || requestId !== state.voice.requestId || !state.voice.enabled) {
+          setVoiceState("idle");
+          return;
         }
 
         const utterance = new SpeechSynthesisUtterance(textToSpeak);
         utterance.voice = state.voice.activeVoice || getBestVoice();
         utterance.rate = 0.92;
         utterance.pitch = 1.0;
-        utterance.onend = () => setVoiceState("idle");
-        utterance.onerror = () => setVoiceState("idle");
+        utterance.onend = () => {
+          if (requestId === state.voice.requestId) {
+            setVoiceState("idle");
+          }
+        };
+        utterance.onerror = () => {
+          if (requestId === state.voice.requestId) {
+            setVoiceState("idle");
+          }
+        };
 
         window.speechSynthesis.speak(utterance);
       }
@@ -3864,7 +4196,18 @@
       }
 
       function hasCredentials() {
-        return Boolean(state.serverCredentialsAvailable);
+        return state.serverCredentialsAvailable !== false;
+      }
+
+      function pauseAutoAnalyze(message) {
+        if (!state.autoAnalyze) {
+          return;
+        }
+
+        state.autoAnalyze = false;
+        elements.autoAnalyzeToggle.checked = false;
+        refreshAutoAnalyze();
+        showToast(message, true);
       }
 
       function updateScreenUI() {
@@ -4089,12 +4432,23 @@
           return;
         }
 
-        state.autoTimer = window.setInterval(() => {
+        state.autoTimer = window.setInterval(async () => {
           if (!state.thinking) {
-            requestTutor(AUTO_ANALYZE_PROMPT, {
+            const result = await requestTutor(AUTO_ANALYZE_PROMPT, {
               captureScreen: true,
               showUserMessage: false,
+              surfaceErrors: false,
             });
+
+            if (!result.accepted || !result.success) {
+              if (result.reason === "missing-credentials") {
+                pauseAutoAnalyze("Auto analyze paused. Add Cloudflare credentials to continue.");
+              } else if (result.reason === "missing-frame") {
+                pauseAutoAnalyze("Auto analyze paused until the shared screen is ready.");
+              } else if (result.reason === "request-failed") {
+                pauseAutoAnalyze("Auto analyze paused because the last analysis request failed.");
+              }
+            }
           }
         }, 10000);
       }
@@ -4131,7 +4485,7 @@
       }
 
       function isSummaryIntent(prompt) {
-        return /(summary|summari[sz]e|what\s+is\s+this\s+(website|site|page)|what\s+is\s+it\s+about|site\s+about|search\s+intent|talking\s+about)/i.test(
+        return /(summari[sz]e\s+(this|the)\s+(website|site|web\s?page|webpage|homepage|landing\s?page)|(website|site|web\s?page|webpage|homepage|landing\s?page)\s+summary|summary\s+of\s+(this|the)\s+(website|site|web\s?page|webpage|homepage|landing\s?page)|what\s+is\s+this\s+(website|site|web\s?page|webpage|homepage|landing\s?page)|what\s+is\s+it\s+about|site\s+about|search\s+intent|what\s+does\s+this\s+(website|site|web\s?page|webpage|homepage|landing\s?page)\s+offer|talking\s+about)/i.test(
           prompt
         );
       }
@@ -4144,24 +4498,34 @@
         return `${prompt}\n\nReturn this exact structure:\n1) Topic: one sentence about what the website/page is about.\n2) What it offers: 2-4 short bullets based only on visible content.\n3) Search intent: what the user likely searched for.\n4) Visible evidence: quote exact on-screen words/phrases.\n5) Unclear/missing: mention unreadable or cut-off parts.\nRules: no guessing, no invented brands, keep it concise.`;
       }
 
-      async function requestTutor(message, options) {
+      async function requestTutor(message, options = {}) {
+        const surfaceErrors = options.surfaceErrors !== false;
         const prompt = message.trim();
         if (!prompt) {
-          showToast("Please write a prompt first.", true);
-          return;
+          if (surfaceErrors) {
+            showToast("Please write a prompt first.", true);
+          }
+          return { accepted: false, success: false, reason: "empty-prompt" };
         }
 
         if (!hasCredentials()) {
-          showToast("Cloudflare credentials are missing in .env. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN, then restart the server.", true);
-          return;
+          if (surfaceErrors) {
+            showToast(
+              "Cloudflare credentials are missing in .env. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN, then restart the server.",
+              true
+            );
+          }
+          return { accepted: false, success: false, reason: "missing-credentials" };
         }
 
         let frameDataUrl = "";
         if (options.captureScreen) {
           frameDataUrl = captureFrame();
           if (!frameDataUrl) {
-            showToast("Start screen sharing before analyzing.", true);
-            return;
+            if (surfaceErrors) {
+              showToast("Start screen sharing before analyzing.", true);
+            }
+            return { accepted: false, success: false, reason: "missing-frame" };
           }
         }
 
@@ -4179,6 +4543,8 @@
           ? "Analyzing the current screen..."
           : "Thinking through your question...";
 
+        let result = { accepted: true, success: true, reason: "ok" };
+
         try {
           const reply = await callLensApi({
             history,
@@ -4189,18 +4555,30 @@
           const cleanedReply = cleanAIResponse(reply);
           const assistantMessage = createMessage("assistant", cleanedReply);
           state.messages.push(assistantMessage);
+          updateLiveAnnouncement(cleanedReply);
           speakAssistantReply(cleanedReply, assistantMessage.id);
           syncCurrentSession();
         } catch (error) {
-          state.messages.push(
-            createMessage("assistant", error instanceof Error ? error.message : "The request failed.", { error: true })
-          );
-          syncCurrentSession();
+          const messageText = error instanceof Error ? error.message : "The request failed.";
+          result = {
+            accepted: true,
+            success: false,
+            reason: "request-failed",
+            message: messageText,
+          };
+
+          if (surfaceErrors) {
+            state.messages.push(createMessage("assistant", messageText, { error: true }));
+            updateLiveAnnouncement(messageText);
+            syncCurrentSession();
+          }
         } finally {
           setThinking(false, "Tutor Ready");
           renderAll();
           updateScreenUI();
         }
+
+        return result;
       }
 
       async function callLensApi({ history, frameDataUrl, userMessage }) {

@@ -4,8 +4,9 @@ const fsSync = require("node:fs");
 const path = require("node:path");
 
 const BASE_PORT = Number(process.env.PORT || 3000);
-const HOST = process.env.HOST || "127.0.0.1";
+const HOST = process.env.HOST || "0.0.0.0";
 const DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+const CLOUDFLARE_TIMEOUT_MS = Number(process.env.CLOUDFLARE_TIMEOUT_MS || 30000);
 const INDEX_PATH = path.join(__dirname, "index.html");
 const ENV_PATH = path.join(__dirname, ".env");
 const SYSTEM_PROMPT = `You are LENS, an AI tutor. Your only job is to help the user learn and understand
@@ -35,6 +36,14 @@ When describing screenshots, only use visible evidence. If anything is unclear,
 say so explicitly instead of guessing.`;
 
 loadDotEnv();
+
+class HttpError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.name = "HttpError";
+    this.statusCode = statusCode;
+  }
+}
 
 function json(response, statusCode, payload) {
   response.writeHead(statusCode, {
@@ -91,7 +100,7 @@ async function readJson(request) {
   for await (const chunk of request) {
     raw += chunk;
     if (raw.length > 20 * 1024 * 1024) {
-      throw new Error("Request body is too large.");
+      throw new HttpError(413, "Request body is too large.");
     }
   }
 
@@ -102,7 +111,7 @@ async function readJson(request) {
   try {
     return JSON.parse(raw);
   } catch {
-    throw new Error("Request body must be valid JSON.");
+    throw new HttpError(400, "Request body must be valid JSON.");
   }
 }
 
@@ -116,7 +125,7 @@ function resolveCredentials(body) {
   const apiToken = String(body.apiToken || process.env.CLOUDFLARE_API_TOKEN || "").trim();
 
   if (!accountId || !apiToken) {
-    throw new Error("Missing Cloudflare Account ID or API Token.");
+    throw new HttpError(400, "Missing Cloudflare Account ID or API Token.");
   }
 
   return { accountId, apiToken };
@@ -125,6 +134,8 @@ function resolveCredentials(body) {
 async function callCloudflare(credentials, payload) {
   let response;
   let data;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLOUDFLARE_TIMEOUT_MS);
 
   try {
     response = await fetch(cloudflareUrl(credentials.accountId), {
@@ -133,16 +144,22 @@ async function callCloudflare(credentials, payload) {
         Authorization: `Bearer ${credentials.apiToken}`,
         "Content-Type": "application/json",
       },
+      signal: controller.signal,
       body: JSON.stringify(payload),
     });
-  } catch {
-    throw new Error("Could not reach Cloudflare Workers AI.");
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw new HttpError(504, "Cloudflare Workers AI timed out.");
+    }
+    throw new HttpError(502, "Could not reach Cloudflare Workers AI.");
+  } finally {
+    clearTimeout(timeout);
   }
 
   try {
     data = await response.json();
   } catch {
-    throw new Error(`Cloudflare returned status ${response.status} with an unreadable response.`);
+    throw new HttpError(502, `Cloudflare returned status ${response.status} with an unreadable response.`);
   }
 
   if (!response.ok || data?.success === false) {
@@ -150,7 +167,7 @@ async function callCloudflare(credentials, payload) {
       (Array.isArray(data?.errors) && data.errors.map((entry) => entry?.message).filter(Boolean).join(" ")) ||
       data?.message ||
       `Cloudflare returned status ${response.status}.`;
-    throw new Error(apiError);
+    throw new HttpError(response.status >= 500 ? 502 : 400, apiError);
   }
 
   return data;
@@ -191,7 +208,7 @@ async function proxyLensTurn(body) {
   const frameDataUrl = String(body.frameDataUrl || "").trim();
 
   if (!userMessage) {
-    throw new Error("Missing user message.");
+    throw new HttpError(400, "Missing user message.");
   }
 
   const messages = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
@@ -243,7 +260,14 @@ async function proxyLensTurn(body) {
 }
 
 const server = http.createServer(async (request, response) => {
-  const url = new URL(request.url || "/", `http://${request.headers.host || `${HOST}:${BASE_PORT}`}`);
+  let url;
+
+  try {
+    url = new URL(request.url || "/", "http://localhost");
+  } catch {
+    json(response, 400, { error: "Malformed request URL." });
+    return;
+  }
 
   if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
     try {
@@ -282,7 +306,8 @@ const server = http.createServer(async (request, response) => {
       json(response, 200, { reply });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Lens proxy request failed.";
-      json(response, 500, { error: message });
+      const statusCode = error instanceof HttpError ? error.statusCode : 500;
+      json(response, statusCode, { error: message });
     }
     return;
   }
