@@ -1,13 +1,13 @@
-const http = require("node:http");
-const fs = require("node:fs/promises");
-const fsSync = require("node:fs");
-const path = require("node:path");
-
-const BASE_PORT = Number(process.env.PORT || 3000);
-const HOST = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
 const DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
-const INDEX_PATH = path.join(__dirname, "index.html");
-const ENV_PATH = path.join(__dirname, ".env");
+
+const DEFAULT_HEADERS = {
+  "Content-Type": "application/json; charset=utf-8",
+  "Cache-Control": "no-store",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
 const SYSTEM_PROMPT = `You are LENS, an AI tutor. Your only job is to help the user learn and understand
 whatever is on their screen right now.
 
@@ -33,84 +33,6 @@ Keep responses focused and appropriately concise. Do not ramble.
 
 When describing screenshots, only use visible evidence. If anything is unclear,
 say so explicitly instead of guessing.`;
-
-loadDotEnv();
-
-function json(response, statusCode, payload) {
-  response.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  response.end(JSON.stringify(payload));
-}
-
-function text(response, statusCode, payload, contentType = "text/plain; charset=utf-8") {
-  response.writeHead(statusCode, {
-    "Content-Type": contentType,
-    "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  });
-  response.end(payload);
-}
-
-function loadDotEnv() {
-  if (!fsSync.existsSync(ENV_PATH)) {
-    return;
-  }
-
-  const raw = fsSync.readFileSync(ENV_PATH, "utf8");
-  for (const line of raw.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-
-    const separatorIndex = trimmed.indexOf("=");
-    if (separatorIndex === -1) {
-      continue;
-    }
-
-    const key = trimmed.slice(0, separatorIndex).trim();
-    let value = trimmed.slice(separatorIndex + 1).trim();
-
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-
-    if (key && process.env[key] === undefined) {
-      process.env[key] = value;
-    }
-  }
-}
-
-async function readJson(request) {
-  let raw = "";
-
-  for await (const chunk of request) {
-    raw += chunk;
-    if (raw.length > 20 * 1024 * 1024) {
-      throw new Error("Request body is too large.");
-    }
-  }
-
-  if (!raw) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(raw);
-  } catch {
-    throw new Error("Request body must be valid JSON.");
-  }
-}
 
 function cloudflareUrl(accountId) {
   const model = String(process.env.CLOUDFLARE_MODEL || DEFAULT_MODEL).trim() || DEFAULT_MODEL;
@@ -248,87 +170,23 @@ async function proxyLensTurn(body) {
   throw new Error("Cloudflare returned no tutor response.");
 }
 
-const server = http.createServer(async (request, response) => {
-  const url = new URL(request.url || "/", `http://${request.headers.host || `${HOST}:${BASE_PORT}`}`);
-
+module.exports = async function handler(request, response) {
   if (request.method === "OPTIONS") {
-    response.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Cache-Control": "no-store",
-    });
-    response.end();
+    response.status(204).set(DEFAULT_HEADERS).end();
     return;
   }
 
-  if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-    try {
-      const html = await fs.readFile(INDEX_PATH, "utf8");
-      text(response, 200, html, "text/html; charset=utf-8");
-    } catch {
-      text(response, 500, "Could not read index.html");
-    }
+  if (request.method !== "POST") {
+    response.status(405).set(DEFAULT_HEADERS).json({ error: "Method not allowed." });
     return;
   }
 
-  if (request.method === "GET" && url.pathname === "/health") {
-    json(response, 200, { ok: true });
-    return;
+  try {
+    const body = request.body && typeof request.body === "object" ? request.body : {};
+    const reply = await proxyLensTurn(body);
+    response.status(200).set(DEFAULT_HEADERS).json({ reply });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Lens proxy request failed.";
+    response.status(500).set(DEFAULT_HEADERS).json({ error: message });
   }
-
-  if (request.method === "GET" && url.pathname === "/api/config") {
-    json(response, 200, {
-      hasServerCredentials: Boolean(
-        process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
-      ),
-    });
-    return;
-  }
-
-  if (request.method === "GET" && url.pathname === "/favicon.ico") {
-    response.writeHead(204);
-    response.end();
-    return;
-  }
-
-  if (request.method === "POST" && url.pathname === "/api/lens") {
-    try {
-      const body = await readJson(request);
-      const reply = await proxyLensTurn(body);
-      json(response, 200, { reply });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Lens proxy request failed.";
-      json(response, 500, { error: message });
-    }
-    return;
-  }
-
-  json(response, 404, { error: "Not found." });
-});
-
-function startServer(port, retriesLeft = 10) {
-  const onError = (error) => {
-    server.off("listening", onListening);
-
-    if (error && error.code === "EADDRINUSE" && retriesLeft > 0) {
-      const nextPort = port + 1;
-      console.warn(`Port ${port} is busy, trying ${nextPort}...`);
-      startServer(nextPort, retriesLeft - 1);
-      return;
-    }
-
-    throw error;
-  };
-
-  const onListening = () => {
-    server.off("error", onError);
-    console.log(`LENS running at http://${HOST}:${port}`);
-  };
-
-  server.once("error", onError);
-  server.once("listening", onListening);
-  server.listen(port, HOST);
-}
-
-startServer(BASE_PORT);
+};

@@ -3108,16 +3108,18 @@
       }
 
       async function loadServerConfig() {
+        const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
         try {
           const response = await fetch("/api/config");
           if (!response.ok) {
+            state.serverCredentialsAvailable = !isLocalHost;
             return;
           }
 
           const data = await response.json();
           state.serverCredentialsAvailable = Boolean(data.hasServerCredentials);
         } catch {
-          state.serverCredentialsAvailable = false;
+          state.serverCredentialsAvailable = !isLocalHost;
         } finally {
           renderTopbarStatus();
         }
@@ -3774,9 +3776,12 @@
           state.voice.keepAliveTimer = null;
         }
 
-        if (window.lensCurrentAudio) {
-          window.lensCurrentAudio.pause();
-          window.lensCurrentAudio = null;
+        const activeAudio = window.lensCurrentAudio;
+        window.lensCurrentAudio = null;
+
+        if (activeAudio) {
+          activeAudio.pause();
+          activeAudio.currentTime = 0;
         }
 
         window.speechSynthesis.cancel();
@@ -3824,8 +3829,6 @@
         const sentences = speakable.match(/[^.!?]+[.!?]+/g) || [speakable];
         const textToSpeak = speakable.length > 500 ? sentences.slice(0, 3).join(" ") : speakable;
 
-        setVoiceState("speaking", messageId);
-
         if (window.lensKokoro) {
           try {
             const audio = await window.lensKokoro.generate(textToSpeak, {
@@ -3833,6 +3836,7 @@
             });
 
             window.lensCurrentAudio = audio;
+            setVoiceState("speaking", messageId);
             audio.play();
             audio.onended = () => {
               window.lensCurrentAudio = null;
@@ -3851,6 +3855,7 @@
         utterance.onend = () => setVoiceState("idle");
         utterance.onerror = () => setVoiceState("idle");
 
+        setVoiceState("speaking", messageId);
         window.speechSynthesis.speak(utterance);
       }
 
@@ -3859,8 +3864,8 @@
         return sentences.slice(0, count).join(" ").trim();
       }
 
-      function speakAssistantReply(reply, messageId) {
-        void speakResponse(reply, messageId);
+      async function speakAssistantReply(reply, messageId) {
+        return speakResponse(reply, messageId);
       }
 
       function hasCredentials() {
@@ -4189,7 +4194,11 @@
           const cleanedReply = cleanAIResponse(reply);
           const assistantMessage = createMessage("assistant", cleanedReply);
           state.messages.push(assistantMessage);
-          speakAssistantReply(cleanedReply, assistantMessage.id);
+          try {
+            await speakAssistantReply(cleanedReply, assistantMessage.id);
+          } catch (voiceError) {
+            console.warn("Voice playback failed", voiceError);
+          }
           syncCurrentSession();
         } catch (error) {
           state.messages.push(
@@ -4207,6 +4216,8 @@
         let response;
         let data;
 
+        const isLocalHost = ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+
         try {
           response = await fetch("/api/lens", {
             method: "POST",
@@ -4220,22 +4231,39 @@
             }),
           });
         } catch {
-          throw new Error("Could not reach the local Node server.");
+          throw new Error(
+            isLocalHost
+              ? "Could not reach the local Node server. Start it with: npm run dev"
+              : "Could not reach the deployed API endpoint at /api/lens. Configure a backend API for this deployment."
+          );
         }
 
         try {
           data = await response.json();
         } catch {
-          throw new Error(`The local server returned status ${response.status} with an unreadable response.`);
+          throw new Error(
+            isLocalHost
+              ? `The local server returned status ${response.status} with an unreadable response.`
+              : `The deployed API returned status ${response.status} with an unreadable response.`
+          );
         }
 
         if (!response.ok) {
-          throw new Error(data.error || `The local server returned status ${response.status}.`);
+          throw new Error(
+            data.error ||
+              (isLocalHost
+                ? `The local server returned status ${response.status}.`
+                : `The deployed API returned status ${response.status}.`)
+          );
         }
 
         const reply = typeof data.reply === "string" ? data.reply.trim() : "";
         if (!reply) {
-          throw new Error("The local server returned no tutor response.");
+          throw new Error(
+            isLocalHost
+              ? "The local server returned no tutor response."
+              : "The deployed API returned no tutor response."
+          );
         }
 
         return reply;
