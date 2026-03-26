@@ -2218,6 +2218,308 @@
         }
       }
 
+      /* Product refinement pass */
+      [hidden] {
+        display: none !important;
+      }
+
+      .topbar-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+
+      .home-grid {
+        align-content: start;
+      }
+
+      .hero-panel,
+      .recent-panel {
+        grid-column: 1 / -1;
+      }
+
+      .insight-panel {
+        grid-column: 1;
+      }
+
+      .workflow-panel {
+        grid-column: 2;
+        grid-row: 2;
+      }
+
+      .hero-panel {
+        grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+        padding: 30px;
+      }
+
+      .feature-grid,
+      .workflow-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .workflow-grid {
+        gap: 12px;
+      }
+
+      .recent-list {
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .session-summary-meta {
+        color: var(--text-secondary);
+        font-size: 0.74rem;
+        letter-spacing: 0.02em;
+      }
+
+      .screen-empty-card {
+        max-width: 520px;
+        background:
+          linear-gradient(180deg, rgba(22, 12, 13, 0.92), rgba(18, 11, 12, 0.88)),
+          radial-gradient(circle at top, rgba(255, 122, 69, 0.16), transparent 55%);
+      }
+
+      .screen-empty-suggestions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .screen-empty-suggestions span {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.42rem 0.78rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 154, 99, 0.24);
+        background: rgba(255, 122, 69, 0.08);
+        color: #ffe7d1;
+        font-size: 0.74rem;
+        letter-spacing: 0.02em;
+      }
+
+      .chat-summary-row {
+        flex: 1;
+        justify-content: flex-end;
+      }
+
+      .chat-session-stats {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 40px;
+      }
+
+      .chat-stat-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.38rem 0.72rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 154, 99, 0.18);
+        background: rgba(255, 122, 69, 0.08);
+        color: #ffd9bf;
+        font-size: 0.72rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .chat-empty-guide {
+        margin: 0 18px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 154, 99, 0.16);
+        background: linear-gradient(180deg, rgba(255, 122, 69, 0.08), rgba(255, 122, 69, 0.03));
+      }
+
+      .chat-empty-guide strong {
+        display: block;
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #ffd7ba;
+      }
+
+      .chat-empty-guide p {
+        margin: 8px 0 0;
+        color: var(--text-secondary);
+        line-height: 1.7;
+      }
+
+      .bubble ol {
+        margin: 0;
+        padding-left: 1.2rem;
+      }
+
+      .bubble p + ol,
+      .bubble ol + p,
+      .bubble ol + pre,
+      .bubble pre + ol,
+      .bubble ul + ol,
+      .bubble ol + ul {
+        margin-top: 12px;
+      }
+
+      .quick-actions {
+        padding-bottom: 2px;
+      }
+
+      .primary-button:disabled,
+      .secondary-button:disabled,
+      .ghost-button:disabled,
+      .quick-button:disabled {
+        opacity: 0.46;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+        filter: saturate(0.35);
+      }
+
+      .quick-button:not(:disabled):hover,
+      .quick-button:not(:disabled):focus-visible {
+        border-color: rgba(255, 154, 99, 0.42);
+        background: rgba(255, 122, 69, 0.12);
+      }
+
+      .voice-control-row {
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .composer textarea {
+        min-height: 104px;
+      }
+
+      .history-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 24px 0;
+      }
+
+      .search-field {
+        flex: 1;
+      }
+
+      .search-field input {
+        width: 100%;
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-soft);
+        background: #24191b;
+        color: var(--text-primary);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.04),
+          0 0 8px rgba(255, 122, 69, 0.06);
+      }
+
+      .history-results-meta {
+        color: var(--text-secondary);
+        font-size: 0.76rem;
+        line-height: 1.5;
+        white-space: nowrap;
+      }
+
+      .history-list {
+        padding-top: 14px;
+      }
+
+      .history-card.selected {
+        transform: translateY(-2px);
+      }
+
+      .history-message-body {
+        color: var(--muted);
+        line-height: 1.72;
+      }
+
+      .history-message-body p,
+      .history-message-body ul,
+      .history-message-body ol,
+      .history-message-body pre {
+        margin: 0;
+      }
+
+      .history-message-body p + p,
+      .history-message-body p + ul,
+      .history-message-body p + ol,
+      .history-message-body ul + p,
+      .history-message-body ol + p,
+      .history-message-body pre + p,
+      .history-message-body p + pre,
+      .history-message-body ul + pre,
+      .history-message-body ol + pre {
+        margin-top: 12px;
+      }
+
+      .history-message-body ul,
+      .history-message-body ol {
+        padding-left: 1.2rem;
+      }
+
+      .history-message-body pre {
+        padding: 14px;
+        overflow-x: auto;
+        border-radius: 12px;
+        background: rgba(10, 7, 8, 0.78);
+        border: 1px solid rgba(255, 154, 99, 0.16);
+        white-space: pre;
+      }
+
+      @media (max-width: 1180px) {
+        .hero-panel,
+        .recent-panel,
+        .insight-panel,
+        .workflow-panel {
+          grid-column: auto;
+        }
+
+        .workflow-panel {
+          grid-row: auto;
+        }
+
+        .feature-grid,
+        .workflow-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .hero-panel {
+          padding: 22px;
+        }
+
+        .chat-summary-row,
+        .chat-session-stats,
+        .history-toolbar {
+          width: 100%;
+          justify-content: flex-start;
+        }
+
+        .chat-empty-guide {
+          margin: 0 16px;
+        }
+
+        .history-toolbar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .history-results-meta {
+          white-space: normal;
+        }
+
+        .screen-empty-suggestions {
+          justify-content: center;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .reveal {
           opacity: 1;
@@ -2253,6 +2555,7 @@
         </nav>
 
         <div class="topbar-actions">
+          <div id="contextStatusPill" class="status-pill subtle">Studio</div>
           <div id="sessionStatusPill" class="status-pill subtle">Fresh Session</div>
         </div>
       </header>
@@ -2412,6 +2715,11 @@
                   <div class="screen-empty-card">
                     <h3>Start sharing your screen</h3>
                     <p>Then ask what you want to learn.</p>
+                    <div class="screen-empty-suggestions" aria-hidden="true">
+                      <span>Explain this page</span>
+                      <span>What bug stands out?</span>
+                      <span>Teach me this code</span>
+                    </div>
                     <div class="hero-actions">
                       <button id="startSharingButton" class="primary-button" type="button">Start Sharing</button>
                       <button id="emptyOpenHistoryButton" class="secondary-button" type="button">Open History</button>
@@ -2441,6 +2749,7 @@
                   <h2 id="chatPanelTitle" class="panel-title">Conversation</h2>
                 </div>
                 <div class="chat-summary-row">
+                  <div id="chatSessionStats" class="chat-session-stats" aria-live="polite"></div>
                   <button id="newChatButton" class="ghost-button" type="button">New Chat</button>
                 </div>
               </div>
@@ -2453,6 +2762,10 @@
               </div>
 
               <div id="quickActions" class="quick-actions"></div>
+              <div id="chatEmptyGuide" class="chat-empty-guide">
+                <strong>Good first prompts</strong>
+                <p id="chatEmptyGuideCopy">Start by sharing a tab, then ask what the page means, what the code is doing, or where the strongest bug signal is.</p>
+              </div>
 
               <div id="chatThread" class="chat-thread" aria-live="polite"></div>
 
@@ -2466,7 +2779,7 @@
 
                 <div class="composer-foot">
                   <div class="composer-note">
-                    Ask naturally. LENS explains clearly without fluff.
+                    Enter sends. Shift+Enter adds a line. Press / to focus the composer and Esc to stop voice.
                   </div>
                   <div class="composer-actions">
                     <button id="micButton" class="secondary-button" type="button" aria-label="Voice input">Mic</button>
@@ -2490,6 +2803,18 @@
                 <button id="historyNewSessionButton" class="secondary-button" type="button">New Session</button>
               </div>
 
+              <div class="history-toolbar">
+                <label class="search-field">
+                  <span class="visually-hidden">Search saved sessions</span>
+                  <input
+                    id="historySearchInput"
+                    type="search"
+                    placeholder="Search sessions, topics, or excerpts"
+                    autocomplete="off"
+                  />
+                </label>
+                <div id="historyResultsMeta" class="history-results-meta">0 sessions</div>
+              </div>
               <div id="historyList" class="history-list"></div>
               <div id="historyListEmpty" class="recent-empty">No saved sessions yet. Start one in Studio to build a reusable history.</div>
             </section>
@@ -2528,6 +2853,7 @@
         ui: "lens.ui.v1",
         voiceEnabled: "lens_voice_enabled",
         voiceSelected: "lens_selected_voice",
+        autoAnalyze: "lens.auto_analyze.v1",
       };
 
       const DEFAULT_ANALYZE_PROMPT =
@@ -2576,9 +2902,10 @@
         messages: [],
         thinking: false,
         thinkingLabel: "Thinking",
-        autoAnalyze: false,
+        autoAnalyze: loadAutoAnalyze(),
         autoTimer: null,
         serverCredentialsAvailable: false,
+        historyQuery: "",
         sessions: loadSessions(),
         currentSessionId: null,
         selectedHistoryId: null,
@@ -2603,9 +2930,13 @@
         analyzeButton: document.getElementById("analyzeButton"),
         autoAnalyzeToggle: document.getElementById("autoAnalyzeToggle"),
         backgroundCanvas: document.getElementById("backgroundCanvas"),
+        chatEmptyGuide: document.getElementById("chatEmptyGuide"),
+        chatEmptyGuideCopy: document.getElementById("chatEmptyGuideCopy"),
         chatResizeHandle: document.getElementById("chatResizeHandle"),
+        chatSessionStats: document.getElementById("chatSessionStats"),
         chatForm: document.getElementById("chatForm"),
         chatThread: document.getElementById("chatThread"),
+        contextStatusPill: document.getElementById("contextStatusPill"),
         emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
         historyDeleteButton: document.getElementById("historyDeleteButton"),
         historyDetailCopy: document.getElementById("historyDetailCopy"),
@@ -2616,7 +2947,9 @@
         historyMessageEmpty: document.getElementById("historyMessageEmpty"),
         historyMessageList: document.getElementById("historyMessageList"),
         historyNewSessionButton: document.getElementById("historyNewSessionButton"),
+        historyResultsMeta: document.getElementById("historyResultsMeta"),
         historyResumeButton: document.getElementById("historyResumeButton"),
+        historySearchInput: document.getElementById("historySearchInput"),
         homeCurrentSession: document.getElementById("homeCurrentSession"),
         homeHistoryButton: document.getElementById("homeHistoryButton"),
         homeNewSessionButton: document.getElementById("homeNewSessionButton"),
@@ -2674,7 +3007,7 @@
         }
 
         bindEvents();
-        renderQuickActions();
+        elements.autoAnalyzeToggle.checked = state.autoAnalyze;
         renderAll();
         updateScreenUI();
         autoSizeTextarea();
@@ -2683,6 +3016,7 @@
         setupRevealAnimations();
         initVoiceFeatures();
         initChatResize();
+        bindKeyboardShortcuts();
       }
 
       function bindEvents() {
@@ -2708,6 +3042,7 @@
 
         elements.autoAnalyzeToggle.addEventListener("change", () => {
           state.autoAnalyze = elements.autoAnalyzeToggle.checked;
+          persistAutoAnalyze();
           refreshAutoAnalyze();
         });
 
@@ -2720,11 +3055,19 @@
 
         elements.userInput.addEventListener("input", autoSizeTextarea);
         elements.userInput.addEventListener("input", updateScreenAttachedChip);
+        elements.userInput.addEventListener("input", refreshComposerState);
         elements.newChatButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.micButton?.addEventListener("click", startMicInput);
         elements.voiceToggleButton?.addEventListener("click", toggleVoiceEnabled);
         elements.voiceStopButton?.addEventListener("click", stopSpeaking);
         elements.voiceSelect?.addEventListener("change", onVoiceSelected);
+        elements.historySearchInput?.addEventListener("input", () => {
+          state.historyQuery = elements.historySearchInput.value.trim();
+          syncHistorySelectionToQuery();
+          renderTopbarStatus();
+          renderHistoryList();
+          renderHistoryDetail();
+        });
 
         elements.chatForm.addEventListener("submit", async (event) => {
           event.preventDefault();
@@ -2737,6 +3080,7 @@
           elements.userInput.value = "";
           autoSizeTextarea();
           updateScreenAttachedChip();
+          refreshComposerState();
 
           await requestTutor(prompt, {
             captureScreen: Boolean(state.stream),
@@ -2833,6 +3177,14 @@
         localStorage.setItem(STORAGE_KEYS.ui, JSON.stringify({ currentView: state.currentView }));
       }
 
+      function loadAutoAnalyze() {
+        return localStorage.getItem(STORAGE_KEYS.autoAnalyze) === "true";
+      }
+
+      function persistAutoAnalyze() {
+        localStorage.setItem(STORAGE_KEYS.autoAnalyze, String(state.autoAnalyze));
+      }
+
       function loadVoiceEnabled() {
         const raw = localStorage.getItem(STORAGE_KEYS.voiceEnabled);
         if (raw === null) {
@@ -2919,6 +3271,13 @@
           .trim();
       }
 
+      function formatClock(value) {
+        return new Intl.DateTimeFormat([], {
+          hour: "numeric",
+          minute: "2-digit",
+        }).format(new Date(value));
+      }
+
       function truncate(text, maxLength) {
         return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
       }
@@ -2945,12 +3304,68 @@
         };
       }
 
+      function isMeaningfulSession(messagesOrSession) {
+        const messages = Array.isArray(messagesOrSession)
+          ? messagesOrSession
+          : Array.isArray(messagesOrSession?.messages)
+            ? messagesOrSession.messages
+            : [];
+
+        return messages.some((message) => {
+          if (message.error) {
+            return true;
+          }
+
+          if (message.role === "user") {
+            return Boolean(String(message.content || "").trim());
+          }
+
+          return stripFormatting(message.content) !== stripFormatting(WELCOME_COPY);
+        });
+      }
+
+      function getSavedSessions() {
+        return state.sessions.filter((session) => isMeaningfulSession(session));
+      }
+
+      function getFilteredSessions() {
+        const sessions = getSavedSessions();
+        const query = state.historyQuery.trim().toLowerCase();
+
+        if (!query) {
+          return sessions;
+        }
+
+        return sessions.filter((session) => {
+          const searchText = [
+            session.title,
+            session.preview,
+            ...session.messages.map((message) => message.content),
+          ]
+            .join(" ")
+            .toLowerCase();
+
+          return searchText.includes(query);
+        });
+      }
+
+      function syncHistorySelectionToQuery() {
+        const sessions = getFilteredSessions();
+        if (sessions.length === 0) {
+          return;
+        }
+
+        if (!sessions.some((session) => session.id === state.selectedHistoryId)) {
+          state.selectedHistoryId = sessions[0].id;
+        }
+      }
+
       function getCurrentSession() {
         return state.sessions.find((session) => session.id === state.currentSessionId) || null;
       }
 
       function getSelectedSession() {
-        return state.sessions.find((session) => session.id === state.selectedHistoryId) || null;
+        return getFilteredSessions().find((session) => session.id === state.selectedHistoryId) || null;
       }
 
       function syncCurrentSession() {
@@ -2986,12 +3401,31 @@
 
       function startNewSession({ switchToStudio }) {
         stopSpeaking();
-        const session = buildNewSession();
-        state.currentSessionId = session.id;
-        state.selectedHistoryId = session.id;
-        state.messages = cloneMessages(session.messages);
-        state.sessions.unshift(session);
-        state.sessions = state.sessions.slice(0, 30);
+        const currentSession = getCurrentSession();
+
+        if (currentSession && !isMeaningfulSession(currentSession)) {
+          const resetSession = {
+            ...buildNewSession(),
+            id: currentSession.id,
+            createdAt: currentSession.createdAt,
+          };
+          const currentIndex = state.sessions.findIndex((session) => session.id === currentSession.id);
+          if (currentIndex >= 0) {
+            state.sessions.splice(currentIndex, 1);
+          }
+          state.sessions.unshift(resetSession);
+          state.currentSessionId = resetSession.id;
+          state.selectedHistoryId = resetSession.id;
+          state.messages = cloneMessages(resetSession.messages);
+        } else {
+          const session = buildNewSession();
+          state.currentSessionId = session.id;
+          state.selectedHistoryId = session.id;
+          state.messages = cloneMessages(session.messages);
+          state.sessions.unshift(session);
+          state.sessions = state.sessions.slice(0, 30);
+        }
+
         persistSessions();
 
         if (switchToStudio) {
@@ -3033,7 +3467,7 @@
           state.selectedHistoryId = fresh.id;
           state.messages = cloneMessages(fresh.messages);
         } else {
-          const fallback = state.sessions[0];
+          const fallback = getSavedSessions()[0] || state.sessions[0];
           state.currentSessionId = fallback.id;
           state.selectedHistoryId = fallback.id;
           state.messages = cloneMessages(fallback.messages);
@@ -3051,8 +3485,7 @@
 
         state.currentView = view;
         persistUiState();
-        renderNavigation();
-        refreshRevealTargets();
+        renderAll();
       }
 
       function setupRevealAnimations() {
@@ -3128,6 +3561,7 @@
       function autoSizeTextarea() {
         elements.userInput.style.height = "auto";
         elements.userInput.style.height = `${Math.min(elements.userInput.scrollHeight, 240)}px`;
+        refreshComposerState();
       }
 
       function showToast(message, isError = false) {
@@ -3143,14 +3577,7 @@
 
       function cleanAIResponse(text) {
         return String(text || "")
-          .replace(/^#{1,6}\s+/gm, "")
-          .replace(/\*\*(.*?)\*\*/g, "$1")
-          .replace(/\*(.*?)\*/g, "$1")
-          .replace(/`{3}[\s\S]*?`{3}/g, (match) => match.replace(/`{3}\w*\n?/g, "").trim())
-          .replace(/`([^`]+)`/g, "$1")
-          .replace(/^[-*+]\s+/gm, "")
-          .replace(/^\d+\.\s+/gm, "")
-          .replace(/^>\s+/gm, "")
+          .replace(/\r\n?/g, "\n")
           .replace(/\n{3,}/g, "\n\n")
           .trim();
       }
@@ -3158,6 +3585,47 @@
       function updateScreenAttachedChip() {
         const attached = Boolean(state.stream);
         elements.screenAttachedChip.hidden = !attached;
+      }
+
+      function refreshComposerState() {
+        const hasPrompt = Boolean(elements.userInput.value.trim());
+        elements.sendButton.disabled = state.thinking || !hasPrompt;
+        elements.micButton.disabled = state.thinking;
+      }
+
+      function bindKeyboardShortcuts() {
+        window.addEventListener("keydown", (event) => {
+          const target = event.target;
+          const isTypingTarget =
+            target instanceof HTMLElement &&
+            (target.matches("input, textarea, select") || target.isContentEditable);
+
+          if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !isTypingTarget) {
+            event.preventDefault();
+            elements.userInput.focus();
+            return;
+          }
+
+          if (event.key === "Escape" && state.voice.speaking) {
+            stopSpeaking();
+            showToast("Voice playback stopped.");
+            return;
+          }
+
+          if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "n") {
+            event.preventDefault();
+            startNewSession({ switchToStudio: true });
+            return;
+          }
+
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && state.stream && !state.thinking) {
+            event.preventDefault();
+            requestTutor(DEFAULT_ANALYZE_PROMPT, {
+              captureScreen: true,
+              showUserMessage: false,
+            });
+          }
+        });
       }
 
       function startMicInput() {
@@ -3274,12 +3742,15 @@
 
           const lines = trimmed.split("\n");
           const isBulletList = lines.length > 0 && lines.every((line) => /^[-*]\s+/.test(line.trim()));
+          const isNumberedList = lines.length > 0 && lines.every((line) => /^\d+[.)]\s+/.test(line.trim()));
 
-          if (isBulletList) {
-            const list = document.createElement("ul");
+          if (isBulletList || isNumberedList) {
+            const list = document.createElement(isNumberedList ? "ol" : "ul");
             lines.forEach((line) => {
               const item = document.createElement("li");
-              item.innerHTML = applyInlineFormatting(line.trim().replace(/^[-*]\s+/, ""));
+              item.innerHTML = applyInlineFormatting(
+                line.trim().replace(isNumberedList ? /^\d+[.)]\s+/ : /^[-*]\s+/, "")
+              );
               list.appendChild(item);
             });
             container.appendChild(list);
@@ -3316,6 +3787,8 @@
         renderNavigation();
         renderTopbarStatus();
         renderStudioChrome();
+        renderQuickActions();
+        renderChatSummary();
         renderMessages();
         renderHomeOverview();
         renderHistoryList();
@@ -3338,8 +3811,26 @@
           elements.sessionStatusPill.textContent = state.thinkingLabel;
           elements.sessionStatusPill.className = "status-pill live";
         } else {
-          elements.sessionStatusPill.textContent = "Ready";
+          elements.sessionStatusPill.textContent = state.stream ? "Ready To Analyze" : "Ready";
           elements.sessionStatusPill.className = "status-pill good";
+        }
+
+        if (!elements.contextStatusPill) {
+          return;
+        }
+
+        if (state.currentView === "history") {
+          const filtered = getFilteredSessions().length;
+          elements.contextStatusPill.textContent = `${filtered} Session${filtered === 1 ? "" : "s"}`;
+        } else if (state.currentView === "home") {
+          const savedCount = getSavedSessions().length;
+          elements.contextStatusPill.textContent = `${savedCount} Saved`;
+        } else if (state.stream) {
+          elements.contextStatusPill.textContent = state.autoAnalyze ? "Screen Live • Auto" : "Screen Live";
+        } else {
+          const currentSession = getCurrentSession();
+          const userTurns = currentSession ? currentSession.totalTurns : 0;
+          elements.contextStatusPill.textContent = userTurns > 0 ? `${userTurns} Question${userTurns === 1 ? "" : "s"}` : "Studio";
         }
       }
 
@@ -3349,6 +3840,34 @@
 
         elements.studioSessionSubtitle.textContent = title;
         elements.homeCurrentSession.textContent = truncate(title, 24);
+      }
+
+      function renderChatSummary() {
+        if (!elements.chatSessionStats) {
+          return;
+        }
+
+        const userTurns = state.messages.filter((message) => !message.error && message.role === "user").length;
+        const totalMessages = state.messages.filter((message) => !message.error).length;
+        const stats = [
+          `${userTurns} prompt${userTurns === 1 ? "" : "s"}`,
+          state.stream ? "screen live" : "chat only",
+          state.autoAnalyze && state.stream ? "auto analyze on" : `${totalMessages} messages`,
+        ];
+
+        elements.chatSessionStats.innerHTML = "";
+        stats.forEach((label) => {
+          const chip = document.createElement("span");
+          chip.className = "chat-stat-chip";
+          chip.textContent = label;
+          elements.chatSessionStats.appendChild(chip);
+        });
+
+        const hasUserTurn = state.messages.some((message) => message.role === "user" && !message.error);
+        elements.chatEmptyGuide.hidden = hasUserTurn;
+        elements.chatEmptyGuideCopy.textContent = state.stream
+          ? "Use Explain Screen, Find The Bug, or ask a precise why question. While sharing is on, every send includes the current frame automatically."
+          : "Start by sharing a tab, then ask what the page means, what the code is doing, or where the strongest bug signal is.";
       }
 
       function renderMessages() {
@@ -3383,18 +3902,12 @@
 
           const meta = document.createElement("span");
           meta.className = "message-meta";
-          meta.textContent = message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS";
+          meta.textContent = `${message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS"} • ${formatClock(message.createdAt)}`;
 
           const text = document.createElement("div");
           text.className = message.role === "assistant" ? "ai-message-text" : "user-message-text";
           const cleaned = message.role === "assistant" ? cleanAIResponse(message.content) : String(message.content || "");
-          cleaned.split(/\n{2,}/).forEach((block) => {
-            const p = document.createElement("p");
-            p.textContent = block.trim();
-            if (p.textContent) {
-              text.appendChild(p);
-            }
-          });
+          appendFormattedContent(text, cleaned);
 
           bubble.append(meta, text);
           row.appendChild(bubble);
@@ -3440,6 +3953,10 @@
           button.className = "quick-button";
           button.type = "button";
           button.textContent = action.label;
+          button.disabled = Boolean(action.capture && !state.stream);
+          if (button.disabled) {
+            button.title = "Start screen sharing to use this action.";
+          }
           button.addEventListener("click", () => {
             requestTutor(action.prompt, {
               captureScreen: action.capture && Boolean(state.stream),
@@ -3451,8 +3968,9 @@
       }
 
       function renderHomeOverview() {
-        const totalSessions = state.sessions.length;
-        const totalQuestions = state.sessions.reduce((count, session) => {
+        const savedSessions = getSavedSessions();
+        const totalSessions = savedSessions.length;
+        const totalQuestions = savedSessions.reduce((count, session) => {
           return (
             count +
             session.messages.filter((message) => !message.error && message.role === "user").length
@@ -3463,7 +3981,7 @@
         elements.homeTotalQuestions.textContent = String(totalQuestions);
 
         elements.homeRecentSessions.innerHTML = "";
-        const recentSessions = state.sessions.slice(0, 3);
+        const recentSessions = savedSessions.slice(0, 4);
         elements.homeRecentEmpty.style.display = recentSessions.length === 0 ? "block" : "none";
 
         recentSessions.forEach((session) => {
@@ -3478,11 +3996,15 @@
           title.textContent = session.title;
           const preview = document.createElement("p");
           preview.textContent = session.preview;
+          const meta = document.createElement("p");
+          meta.className = "session-summary-meta";
+          meta.textContent = `${session.totalTurns} question${session.totalTurns === 1 ? "" : "s"} • updated ${formatDate(session.updatedAt)}`;
           left.append(title, preview);
+          left.appendChild(meta);
 
           const chip = document.createElement("span");
           chip.className = "session-chip";
-          chip.textContent = formatDate(session.updatedAt);
+          chip.textContent = session.id === state.currentSessionId ? "Current" : "Saved";
 
           header.append(left, chip);
 
@@ -3513,10 +4035,20 @@
       }
 
       function renderHistoryList() {
+        syncHistorySelectionToQuery();
         elements.historyList.innerHTML = "";
-        elements.historyListEmpty.style.display = state.sessions.length === 0 ? "block" : "none";
+        const savedSessions = getSavedSessions();
+        const filteredSessions = getFilteredSessions();
 
-        state.sessions.forEach((session) => {
+        elements.historyResultsMeta.textContent = state.historyQuery
+          ? `${filteredSessions.length} of ${savedSessions.length} sessions`
+          : `${savedSessions.length} saved session${savedSessions.length === 1 ? "" : "s"}`;
+        elements.historyListEmpty.style.display = filteredSessions.length === 0 ? "block" : "none";
+        elements.historyListEmpty.textContent = savedSessions.length === 0
+          ? "No saved sessions yet. Start one in Studio to build a reusable history."
+          : `No sessions match "${state.historyQuery}".`;
+
+        filteredSessions.forEach((session) => {
           const card = document.createElement("article");
           card.className = `history-card${session.id === state.selectedHistoryId ? " selected" : ""}`;
 
@@ -3538,7 +4070,7 @@
 
           const meta = document.createElement("p");
           meta.className = "history-meta";
-          meta.textContent = `Updated ${formatDate(session.updatedAt)}`;
+          meta.textContent = `${session.totalTurns} question${session.totalTurns === 1 ? "" : "s"} • updated ${formatDate(session.updatedAt)}`;
 
           const actions = document.createElement("div");
           actions.className = "history-card-actions";
@@ -3568,20 +4100,37 @@
         elements.historyMessageList.innerHTML = "";
 
         if (!session) {
-          elements.historyDetailTitle.textContent = "No Session Selected";
-          elements.historyDetailCopy.textContent = "Choose a saved thread on the left to inspect its conversation.";
+          const savedSessions = getSavedSessions();
+          elements.historyDetailTitle.textContent = state.historyQuery
+            ? "No Matching Session"
+            : savedSessions.length === 0
+              ? "No Saved Sessions Yet"
+              : "No Session Selected";
+          elements.historyDetailCopy.textContent = state.historyQuery
+            ? "Try a different search term or clear the filter to inspect a saved conversation."
+            : savedSessions.length === 0
+              ? "Start a conversation in Studio and it will appear here once the thread has real activity."
+              : "Choose a saved thread on the left to inspect its conversation.";
           elements.historyDetailMetrics.innerHTML = "";
           elements.historyMessageEmpty.style.display = "block";
           elements.historyResumeButton.disabled = true;
           elements.historyDeleteButton.disabled = true;
+          elements.historyResumeButton.hidden = true;
+          elements.historyDeleteButton.hidden = true;
+          elements.historyMessageEmpty.textContent = savedSessions.length === 0
+            ? "Your first meaningful session will show up here after you ask LENS a real question."
+            : "Choose a session on the left to inspect its thread.";
           return;
         }
 
         elements.historyResumeButton.disabled = false;
         elements.historyDeleteButton.disabled = false;
+        elements.historyResumeButton.hidden = false;
+        elements.historyDeleteButton.hidden = false;
         elements.historyDetailTitle.textContent = session.title;
         elements.historyDetailCopy.textContent = session.preview;
         elements.historyMessageEmpty.style.display = session.messages.length === 0 ? "block" : "none";
+        elements.historyMessageEmpty.textContent = "Choose a session on the left to inspect its thread.";
 
         const detailItems = [
           `${session.totalTurns} questions`,
@@ -3603,10 +4152,14 @@
 
           const meta = document.createElement("span");
           meta.className = "message-meta";
-          meta.textContent = message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS";
+          meta.textContent = `${message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS"} • ${formatClock(message.createdAt)}`;
 
-          const body = document.createElement("p");
-          body.textContent = message.role === "assistant" ? cleanAIResponse(message.content) : message.content;
+          const body = document.createElement("div");
+          body.className = "history-message-body";
+          appendFormattedContent(
+            body,
+            message.role === "assistant" ? cleanAIResponse(message.content) : String(message.content || "")
+          );
 
           item.append(meta, body);
           elements.historyMessageList.appendChild(item);
@@ -3618,10 +4171,11 @@
         state.thinkingLabel = label || state.thinkingLabel;
         elements.aiDot.classList.toggle("live", nextValue);
         elements.aiStatusText.textContent = nextValue ? "Tutor Thinking" : "Tutor Ready";
-        elements.sendButton.disabled = nextValue;
-        elements.analyzeButton.disabled = nextValue;
         elements.screenStage.classList.toggle("thinking", nextValue);
+        refreshComposerState();
         renderMessages();
+        renderChatSummary();
+        renderTopbarStatus();
         updateScreenUI();
       }
 
@@ -3876,10 +4430,15 @@
         const isLive = Boolean(state.stream);
         elements.workspace?.classList.toggle("sharing", isLive);
         updateScreenAttachedChip();
+        renderQuickActions();
+        renderChatSummary();
+        renderTopbarStatus();
         elements.screenStage.classList.toggle("live", isLive);
         elements.screenVideo.classList.toggle("live", isLive);
         elements.videoControls.classList.toggle("visible", isLive);
         elements.screenEmpty.classList.toggle("hidden", isLive);
+        elements.analyzeButton.disabled = state.thinking || !isLive;
+        elements.analyzeButton.textContent = isLive ? "Analyze Now" : "Share Screen First";
 
         if (state.thinking) {
           elements.stageStatusChip.textContent = state.thinkingLabel;
@@ -4091,6 +4650,8 @@
         }
 
         if (!state.autoAnalyze || !state.stream) {
+          renderChatSummary();
+          renderTopbarStatus();
           return;
         }
 
@@ -4102,6 +4663,9 @@
             });
           }
         }, 10000);
+
+        renderChatSummary();
+        renderTopbarStatus();
       }
 
       function captureFrame() {
