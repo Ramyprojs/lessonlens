@@ -2253,6 +2253,21 @@
         padding: 30px;
       }
 
+      .workspace.chat-focus {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .workspace.chat-focus .studio-panel,
+      .workspace.chat-focus .chat-resize-handle {
+        display: none;
+      }
+
+      #chatFocusButton.active {
+        border-color: rgba(255, 154, 99, 0.36);
+        background: rgba(255, 122, 69, 0.12);
+        color: #ffe7d1;
+      }
+
       .feature-grid,
       .workflow-grid {
         display: grid;
@@ -2700,6 +2715,7 @@
                     <input id="autoAnalyzeToggle" type="checkbox" />
                     <span>Auto analyze</span>
                   </label>
+                  <button id="chatFocusButton" class="ghost-button" type="button">Focus Chat</button>
                   <button id="studioNewSessionButton" class="ghost-button" type="button">New Session</button>
                 </div>
               </div>
@@ -2750,6 +2766,7 @@
                 </div>
                 <div class="chat-summary-row">
                   <div id="chatSessionStats" class="chat-session-stats" aria-live="polite"></div>
+                  <button id="copyThreadButton" class="ghost-button" type="button">Copy Thread</button>
                   <button id="newChatButton" class="ghost-button" type="button">New Chat</button>
                 </div>
               </div>
@@ -2779,7 +2796,7 @@
 
                 <div class="composer-foot">
                   <div class="composer-note">
-                    Enter sends. Shift+Enter adds a line. Press / to focus the composer and Esc to stop voice.
+                    Enter sends. Shift+Enter adds a line. Press / to focus, Esc to stop voice, Cmd/Ctrl+Shift+F for chat focus, and Cmd/Ctrl+Shift+C to copy the thread.
                   </div>
                   <div class="composer-actions">
                     <button id="micButton" class="secondary-button" type="button" aria-label="Voice input">Mic</button>
@@ -2832,6 +2849,7 @@
 
               <div class="history-detail-actions" style="padding: 18px 24px 0">
                 <button id="historyResumeButton" class="primary-button" type="button">Open In Studio</button>
+                <button id="historyCopyButton" class="secondary-button" type="button">Copy Transcript</button>
                 <button id="historyDeleteButton" class="ghost-button" type="button">Delete Session</button>
               </div>
 
@@ -2854,6 +2872,7 @@
         voiceEnabled: "lens_voice_enabled",
         voiceSelected: "lens_selected_voice",
         autoAnalyze: "lens.auto_analyze.v1",
+        chatFocus: "lens.chat_focus.v1",
       };
 
       const DEFAULT_ANALYZE_PROMPT =
@@ -2905,6 +2924,7 @@
         autoAnalyze: loadAutoAnalyze(),
         autoTimer: null,
         serverCredentialsAvailable: false,
+        chatFocus: false,
         historyQuery: "",
         sessions: loadSessions(),
         currentSessionId: null,
@@ -2931,13 +2951,16 @@
         autoAnalyzeToggle: document.getElementById("autoAnalyzeToggle"),
         backgroundCanvas: document.getElementById("backgroundCanvas"),
         chatEmptyGuide: document.getElementById("chatEmptyGuide"),
+        chatFocusButton: document.getElementById("chatFocusButton"),
         chatEmptyGuideCopy: document.getElementById("chatEmptyGuideCopy"),
         chatResizeHandle: document.getElementById("chatResizeHandle"),
         chatSessionStats: document.getElementById("chatSessionStats"),
         chatForm: document.getElementById("chatForm"),
         chatThread: document.getElementById("chatThread"),
+        copyThreadButton: document.getElementById("copyThreadButton"),
         contextStatusPill: document.getElementById("contextStatusPill"),
         emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
+        historyCopyButton: document.getElementById("historyCopyButton"),
         historyDeleteButton: document.getElementById("historyDeleteButton"),
         historyDetailCopy: document.getElementById("historyDetailCopy"),
         historyDetailMetrics: document.getElementById("historyDetailMetrics"),
@@ -3006,6 +3029,9 @@
           state.messages = cloneMessages(latest.messages);
         }
 
+        const savedChatFocus = loadChatFocus();
+        state.chatFocus = savedChatFocus === null ? shouldDefaultChatFocus() : savedChatFocus;
+
         bindEvents();
         elements.autoAnalyzeToggle.checked = state.autoAnalyze;
         renderAll();
@@ -3027,9 +3053,11 @@
         elements.homeOpenStudioButton.addEventListener("click", () => setActiveView("studio"));
         elements.homeHistoryButton.addEventListener("click", () => setActiveView("history"));
         elements.homeNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
+        elements.chatFocusButton.addEventListener("click", toggleChatFocus);
         elements.studioNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.historyNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.emptyOpenHistoryButton.addEventListener("click", () => setActiveView("history"));
+        elements.copyThreadButton.addEventListener("click", copyCurrentTranscript);
 
         elements.startSharingButton.addEventListener("click", startScreenShare);
         elements.stopSharingButton.addEventListener("click", stopScreenShare);
@@ -3127,6 +3155,13 @@
           }
         });
 
+        elements.historyCopyButton.addEventListener("click", () => {
+          const session = getSelectedSession();
+          if (session) {
+            void copyText(buildSessionTranscript(session), `Copied "${session.title}" transcript.`);
+          }
+        });
+
         elements.historyDeleteButton.addEventListener("click", () => {
           if (state.selectedHistoryId) {
             deleteSession(state.selectedHistoryId);
@@ -3183,6 +3218,19 @@
 
       function persistAutoAnalyze() {
         localStorage.setItem(STORAGE_KEYS.autoAnalyze, String(state.autoAnalyze));
+      }
+
+      function loadChatFocus() {
+        const raw = localStorage.getItem(STORAGE_KEYS.chatFocus);
+        if (raw === null) {
+          return null;
+        }
+
+        return raw === "true";
+      }
+
+      function persistChatFocus() {
+        localStorage.setItem(STORAGE_KEYS.chatFocus, String(state.chatFocus));
       }
 
       function loadVoiceEnabled() {
@@ -3259,6 +3307,14 @@
 
       function cloneMessages(messages) {
         return messages.map((message) => ({ ...message }));
+      }
+
+      function shouldDefaultChatFocus() {
+        return (
+          window.innerWidth <= 720 &&
+          !state.stream &&
+          state.messages.some((message) => !message.error && message.role === "user")
+        );
       }
 
       function stripFormatting(text) {
@@ -3575,11 +3631,43 @@
         }, 3600);
       }
 
+      async function copyText(value, successMessage) {
+        const text = String(value || "").trim();
+        if (!text) {
+          showToast("There is nothing to copy yet.", true);
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast(successMessage || "Copied.");
+        } catch {
+          showToast("Clipboard copy failed in this browser.", true);
+        }
+      }
+
       function cleanAIResponse(text) {
         return String(text || "")
           .replace(/\r\n?/g, "\n")
           .replace(/\n{3,}/g, "\n\n")
           .trim();
+      }
+
+      function buildSessionTranscript(session) {
+        const lines = [
+          session.title,
+          `Created: ${formatDate(session.createdAt)}`,
+          `Updated: ${formatDate(session.updatedAt)}`,
+          "",
+        ];
+
+        session.messages.forEach((message) => {
+          lines.push(`${message.role === "user" ? "You" : message.error ? "LENS Error" : "LENS"} (${formatClock(message.createdAt)})`);
+          lines.push(message.role === "assistant" ? cleanAIResponse(message.content) : String(message.content || "").trim());
+          lines.push("");
+        });
+
+        return lines.join("\n").trim();
       }
 
       function updateScreenAttachedChip() {
@@ -3591,6 +3679,24 @@
         const hasPrompt = Boolean(elements.userInput.value.trim());
         elements.sendButton.disabled = state.thinking || !hasPrompt;
         elements.micButton.disabled = state.thinking;
+      }
+
+      function toggleChatFocus() {
+        state.chatFocus = !state.chatFocus;
+        persistChatFocus();
+        renderWorkspaceMode();
+        renderChatSummary();
+        renderTopbarStatus();
+      }
+
+      function copyCurrentTranscript() {
+        const session = getCurrentSession();
+        if (!session) {
+          showToast("There is no active session yet.", true);
+          return;
+        }
+
+        void copyText(buildSessionTranscript(session), `Copied "${session.title}" transcript.`);
       }
 
       function bindKeyboardShortcuts() {
@@ -3615,6 +3721,18 @@
           if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "n") {
             event.preventDefault();
             startNewSession({ switchToStudio: true });
+            return;
+          }
+
+          if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "f") {
+            event.preventDefault();
+            toggleChatFocus();
+            return;
+          }
+
+          if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "c") {
+            event.preventDefault();
+            copyCurrentTranscript();
             return;
           }
 
@@ -3787,6 +3905,7 @@
         renderNavigation();
         renderTopbarStatus();
         renderStudioChrome();
+        renderWorkspaceMode();
         renderQuickActions();
         renderChatSummary();
         renderMessages();
@@ -3825,6 +3944,8 @@
         } else if (state.currentView === "home") {
           const savedCount = getSavedSessions().length;
           elements.contextStatusPill.textContent = `${savedCount} Saved`;
+        } else if (state.chatFocus) {
+          elements.contextStatusPill.textContent = "Chat Focus";
         } else if (state.stream) {
           elements.contextStatusPill.textContent = state.autoAnalyze ? "Screen Live • Auto" : "Screen Live";
         } else {
@@ -3842,6 +3963,17 @@
         elements.homeCurrentSession.textContent = truncate(title, 24);
       }
 
+      function renderWorkspaceMode() {
+        elements.workspace.classList.toggle("chat-focus", state.chatFocus);
+
+        if (!elements.chatFocusButton) {
+          return;
+        }
+
+        elements.chatFocusButton.textContent = state.chatFocus ? "Show Split View" : "Focus Chat";
+        elements.chatFocusButton.classList.toggle("active", state.chatFocus);
+      }
+
       function renderChatSummary() {
         if (!elements.chatSessionStats) {
           return;
@@ -3852,7 +3984,11 @@
         const stats = [
           `${userTurns} prompt${userTurns === 1 ? "" : "s"}`,
           state.stream ? "screen live" : "chat only",
-          state.autoAnalyze && state.stream ? "auto analyze on" : `${totalMessages} messages`,
+          state.chatFocus
+            ? "focus mode"
+            : state.autoAnalyze && state.stream
+              ? "auto analyze on"
+              : `${totalMessages} messages`,
         ];
 
         elements.chatSessionStats.innerHTML = "";
@@ -3865,9 +4001,12 @@
 
         const hasUserTurn = state.messages.some((message) => message.role === "user" && !message.error);
         elements.chatEmptyGuide.hidden = hasUserTurn;
+        elements.copyThreadButton.disabled = !isMeaningfulSession(getCurrentSession());
         elements.chatEmptyGuideCopy.textContent = state.stream
           ? "Use Explain Screen, Find The Bug, or ask a precise why question. While sharing is on, every send includes the current frame automatically."
-          : "Start by sharing a tab, then ask what the page means, what the code is doing, or where the strongest bug signal is.";
+          : state.chatFocus
+            ? "You are in chat focus mode. Switch back to split view any time if you want the preview stage visible again."
+            : "Start by sharing a tab, then ask what the page means, what the code is doing, or where the strongest bug signal is.";
       }
 
       function renderMessages() {
@@ -4114,8 +4253,10 @@
           elements.historyDetailMetrics.innerHTML = "";
           elements.historyMessageEmpty.style.display = "block";
           elements.historyResumeButton.disabled = true;
+          elements.historyCopyButton.disabled = true;
           elements.historyDeleteButton.disabled = true;
           elements.historyResumeButton.hidden = true;
+          elements.historyCopyButton.hidden = true;
           elements.historyDeleteButton.hidden = true;
           elements.historyMessageEmpty.textContent = savedSessions.length === 0
             ? "Your first meaningful session will show up here after you ask LENS a real question."
@@ -4124,8 +4265,10 @@
         }
 
         elements.historyResumeButton.disabled = false;
+        elements.historyCopyButton.disabled = false;
         elements.historyDeleteButton.disabled = false;
         elements.historyResumeButton.hidden = false;
+        elements.historyCopyButton.hidden = false;
         elements.historyDeleteButton.hidden = false;
         elements.historyDetailTitle.textContent = session.title;
         elements.historyDetailCopy.textContent = session.preview;
@@ -4430,6 +4573,7 @@
         const isLive = Boolean(state.stream);
         elements.workspace?.classList.toggle("sharing", isLive);
         updateScreenAttachedChip();
+        renderWorkspaceMode();
         renderQuickActions();
         renderChatSummary();
         renderTopbarStatus();
@@ -4600,6 +4744,10 @@
           }
 
           state.stream = stream;
+          if (state.chatFocus) {
+            state.chatFocus = false;
+            persistChatFocus();
+          }
           elements.screenVideo.srcObject = stream;
           await elements.screenVideo.play().catch(() => undefined);
           const [trackReady, videoReady] = await Promise.all([
