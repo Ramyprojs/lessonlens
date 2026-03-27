@@ -115,6 +115,7 @@
 
       button {
         cursor: pointer;
+        touch-action: manipulation;
       }
 
       button:focus-visible,
@@ -2710,18 +2711,18 @@
 
         .panel-header-actions {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: 1fr;
           width: 100%;
         }
 
         .panel-header-actions label {
-          grid-column: 1 / -1;
+          grid-column: auto;
         }
 
         .chat-summary-row {
           width: 100%;
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: 1fr;
           gap: 8px;
           align-items: stretch;
           overflow: visible;
@@ -2733,17 +2734,53 @@
         }
 
         .screen-stage {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
           margin: 0 14px 14px;
-          min-height: 330px;
+          min-height: auto;
+          padding: 14px;
           border-radius: 20px;
         }
 
+        .screen-video,
+        .screen-video.live {
+          width: 100%;
+          height: auto;
+          min-height: 220px;
+          aspect-ratio: 16 / 10;
+          border-radius: 16px;
+          object-fit: cover;
+        }
+
+        .stage-grid-overlay,
+        .stage-scanline,
+        .stage-focus-ring {
+          display: none;
+        }
+
+        .stage-status-chip,
+        .screen-empty,
+        .video-controls,
+        .analyze-bar {
+          position: static;
+          inset: auto;
+        }
+
+        .stage-status-chip {
+          align-self: flex-start;
+        }
+
         .screen-empty {
-          padding: 22px;
+          display: block;
+          padding: 0;
         }
 
         .screen-empty-card {
+          width: 100%;
+          max-width: none;
           padding: 24px 20px;
+          text-align: left;
         }
 
         .screen-empty-card h3 {
@@ -2751,12 +2788,48 @@
         }
 
         .screen-empty-suggestions {
-          justify-content: flex-start;
+          display: none;
+        }
+
+        .screen-empty-card .hero-actions {
+          flex-direction: column;
+          align-items: stretch;
+          margin-top: 18px;
+        }
+
+        .screen-empty-card .hero-actions > button {
+          width: 100%;
+        }
+
+        .screen-stage:not(.live) .analyze-bar,
+        .screen-stage:not(.live) .video-controls {
+          display: none;
+        }
+
+        .video-controls.visible {
+          display: flex;
+          width: 100%;
+        }
+
+        .video-controls .secondary-button {
+          width: 100%;
         }
 
         .analyze-bar {
           gap: 10px;
+          width: 100%;
+          padding: 14px;
           border-radius: 18px;
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .analyze-bar .primary-button {
+          width: 100%;
+        }
+
+        .screen-meta {
+          max-width: none;
         }
 
         .voice-control-row {
@@ -4997,7 +5070,7 @@
           elements.stageStatusChip.textContent = "Live Capture";
           elements.stageStatusChip.className = "stage-status-chip live";
         } else {
-          elements.stageStatusChip.textContent = "Idle";
+          elements.stageStatusChip.textContent = "Ready to Share";
           elements.stageStatusChip.className = "stage-status-chip";
         }
 
@@ -5120,7 +5193,10 @@
 
         try {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-            throw new Error("This browser does not support screen sharing.");
+            const unsupportedMessage = window.matchMedia("(max-width: 720px)").matches
+              ? "Screen sharing is not available in this mobile browser. Try another browser or open LENS on desktop."
+              : "This browser does not support screen sharing.";
+            throw new Error(unsupportedMessage);
           }
 
           screenShareInFlight = true;
