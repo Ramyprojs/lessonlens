@@ -920,6 +920,18 @@
         display: block;
       }
 
+      .screen-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: none;
+        background: #050505;
+      }
+
+      .screen-image.live {
+        display: block;
+      }
+
       .stage-grid-overlay,
       .stage-scanline,
       .stage-focus-ring {
@@ -1031,6 +1043,11 @@
         line-height: 1.78;
       }
 
+      .screen-fallback-note {
+        color: var(--muted-soft);
+        font-size: 0.82rem;
+      }
+
       .screen-empty-card .hero-actions {
         justify-content: center;
       }
@@ -1040,10 +1057,13 @@
         top: 18px;
         right: 18px;
         display: none;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
 
       .video-controls.visible {
-        display: block;
+        display: flex;
       }
 
       .analyze-bar {
@@ -2744,13 +2764,14 @@
         }
 
         .screen-video,
-        .screen-video.live {
+        .screen-video.live,
+        .screen-image,
+        .screen-image.live {
           width: 100%;
           height: auto;
           min-height: 220px;
           aspect-ratio: 16 / 10;
           border-radius: 16px;
-          object-fit: cover;
         }
 
         .stage-grid-overlay,
@@ -2811,7 +2832,7 @@
           width: 100%;
         }
 
-        .video-controls .secondary-button {
+        .video-controls > button {
           width: 100%;
         }
 
@@ -3186,15 +3207,17 @@
 
               <div id="screenStage" class="screen-stage">
                 <video id="screenVideo" class="screen-video" autoplay muted playsinline aria-label="Shared screen preview"></video>
+                <img id="screenImage" class="screen-image" alt="Attached screenshot preview" />
                 <div class="stage-grid-overlay"></div>
                 <div class="stage-scanline"></div>
                 <div class="stage-focus-ring"></div>
-                <div id="stageStatusChip" class="stage-status-chip">Idle</div>
+                <div id="stageStatusChip" class="stage-status-chip">Ready to Share</div>
 
                 <div id="screenEmpty" class="screen-empty">
                   <div class="screen-empty-card">
-                    <h3>Start sharing your screen</h3>
-                    <p>Then ask what you want to learn.</p>
+                    <h3>Bring in your screen</h3>
+                    <p>Share your screen or add a screenshot, then ask what you want to learn.</p>
+                    <p class="screen-fallback-note">On iPhone and Android browsers, adding a screenshot is the reliable mobile fallback.</p>
                     <div class="screen-empty-suggestions" aria-hidden="true">
                       <span>Explain this page</span>
                       <span>What bug stands out?</span>
@@ -3202,8 +3225,10 @@
                     </div>
                     <div class="hero-actions">
                       <button id="startSharingButton" class="primary-button" type="button">Start Sharing</button>
+                      <button id="uploadImageButton" class="secondary-button" type="button">Add Screenshot</button>
                       <button id="emptyOpenHistoryButton" class="secondary-button" type="button">Open History</button>
                     </div>
+                    <input id="imageUploadInput" class="visually-hidden" type="file" accept="image/*" tabindex="-1" aria-hidden="true" />
                   </div>
                 </div>
 
@@ -3211,9 +3236,14 @@
                   <button id="stopSharingButton" class="secondary-button" type="button">Stop</button>
                 </div>
 
+                <div id="imageControls" class="video-controls">
+                  <button id="replaceImageButton" class="secondary-button" type="button">Replace Screenshot</button>
+                  <button id="clearImageButton" class="ghost-button" type="button">Clear</button>
+                </div>
+
                 <div class="analyze-bar">
                   <div id="screenMeta" class="screen-meta">
-                    No live screen yet. Start sharing to let LENS see what you are working on.
+                    No screen context yet. Share your screen or add a screenshot to let LENS see what you are working on.
                   </div>
                   <button id="analyzeButton" class="primary-button" type="button">Analyze Now</button>
                 </div>
@@ -3245,7 +3275,7 @@
               <div id="quickActions" class="quick-actions"></div>
               <div id="chatEmptyGuide" class="chat-empty-guide">
                 <strong>Good first prompts</strong>
-                <p id="chatEmptyGuideCopy">Start by sharing a tab, then ask what the page means, what the code is doing, or where the strongest bug signal is.</p>
+                <p id="chatEmptyGuideCopy">Start by sharing a tab or adding a screenshot, then ask what the page means, what the code is doing, or where the strongest bug signal is.</p>
               </div>
 
               <div id="chatThread" class="chat-thread" aria-live="polite"></div>
@@ -3373,7 +3403,7 @@
         },
       ];
       const WELCOME_COPY =
-        "Share your screen, ask a question, and I will guide your next step.";
+        "Share your screen or add a screenshot, ask a question, and I will guide your next step.";
 
       const KOKORO_VOICE_OPTIONS = [
         { id: "af_bella", label: "Bella (Natural)" },
@@ -3388,6 +3418,8 @@
 
       const state = {
         stream: null,
+        contextImageDataUrl: "",
+        contextImageLabel: "",
         messages: [],
         thinking: false,
         thinkingLabel: "Thinking",
@@ -3430,6 +3462,7 @@
         copyThreadButton: document.getElementById("copyThreadButton"),
         contextStatusPill: document.getElementById("contextStatusPill"),
         emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
+        clearImageButton: document.getElementById("clearImageButton"),
         historyCopyButton: document.getElementById("historyCopyButton"),
         historyDeleteButton: document.getElementById("historyDeleteButton"),
         historyDetailCopy: document.getElementById("historyDetailCopy"),
@@ -3457,6 +3490,7 @@
         navTabs: Array.from(document.querySelectorAll(".nav-tab")),
         quickActions: document.getElementById("quickActions"),
         screenEmpty: document.getElementById("screenEmpty"),
+        screenImage: document.getElementById("screenImage"),
         screenMeta: document.getElementById("screenMeta"),
         screenStage: document.getElementById("screenStage"),
         screenVideo: document.getElementById("screenVideo"),
@@ -3466,6 +3500,10 @@
         stageStatusChip: document.getElementById("stageStatusChip"),
         startSharingButton: document.getElementById("startSharingButton"),
         stopSharingButton: document.getElementById("stopSharingButton"),
+        imageControls: document.getElementById("imageControls"),
+        imageUploadInput: document.getElementById("imageUploadInput"),
+        replaceImageButton: document.getElementById("replaceImageButton"),
+        uploadImageButton: document.getElementById("uploadImageButton"),
         voiceSelect: document.getElementById("voiceSelect"),
         voiceModelStatus: document.getElementById("voiceModelStatus"),
         voiceStopButton: document.getElementById("voiceStopButton"),
@@ -3536,6 +3574,10 @@
 
         elements.startSharingButton.addEventListener("click", startScreenShare);
         elements.stopSharingButton.addEventListener("click", stopScreenShare);
+        elements.uploadImageButton.addEventListener("click", openImagePicker);
+        elements.replaceImageButton.addEventListener("click", openImagePicker);
+        elements.clearImageButton.addEventListener("click", () => clearImageContext({ showToastMessage: true }));
+        elements.imageUploadInput.addEventListener("change", handleImageUpload);
         elements.analyzeButton.addEventListener("click", () =>
           requestTutor(DEFAULT_ANALYZE_PROMPT, {
             captureScreen: true,
@@ -3586,7 +3628,7 @@
           refreshComposerState();
 
           await requestTutor(prompt, {
-            captureScreen: Boolean(state.stream),
+            captureScreen: hasVisualContext(),
             showUserMessage: true,
           });
         });
@@ -3720,6 +3762,22 @@
         return localStorage.getItem(STORAGE_KEYS.voiceSelected) || "af_bella";
       }
 
+      function hasVisualContext() {
+        return Boolean(state.stream || state.contextImageDataUrl);
+      }
+
+      function getVisualContextMode() {
+        if (state.stream) {
+          return "stream";
+        }
+
+        if (state.contextImageDataUrl) {
+          return "image";
+        }
+
+        return "none";
+      }
+
       function normalizeSession(raw) {
         if (!raw || typeof raw !== "object") {
           return null;
@@ -3787,7 +3845,7 @@
       function shouldDefaultChatFocus() {
         return (
           window.innerWidth <= 720 &&
-          !state.stream &&
+          !hasVisualContext() &&
           state.messages.some((message) => !message.error && message.role === "user")
         );
       }
@@ -4145,9 +4203,111 @@
         return lines.join("\n").trim();
       }
 
+      function openImagePicker() {
+        if (!elements.imageUploadInput) {
+          return;
+        }
+
+        elements.imageUploadInput.value = "";
+        elements.imageUploadInput.click();
+      }
+
+      async function handleImageUpload(event) {
+        const input = event.target;
+        const file = input && input.files ? input.files[0] : null;
+
+        if (!file) {
+          return;
+        }
+
+        if (!file.type.startsWith("image/")) {
+          showToast("Choose an image file for the screenshot preview.", true);
+          input.value = "";
+          return;
+        }
+
+        try {
+          const dataUrl = await fileToContextDataUrl(file);
+          if (!dataUrl) {
+            throw new Error("Could not read that image.");
+          }
+
+          if (state.stream) {
+            stopScreenShare();
+          }
+
+          state.contextImageDataUrl = dataUrl;
+          state.contextImageLabel = file.name || "Attached screenshot";
+          elements.screenImage.src = dataUrl;
+          updateScreenUI();
+          refreshAutoAnalyze();
+          setActiveView("studio");
+          showToast("Screenshot ready for analysis.");
+        } catch (error) {
+          showToast(error instanceof Error ? error.message : "Could not read that image.", true);
+        } finally {
+          input.value = "";
+        }
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+          reader.onerror = () => reject(new Error("Could not read that image."));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      function loadImageElement(src) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = () => reject(new Error("Could not decode that image."));
+          image.src = src;
+        });
+      }
+
+      async function fileToContextDataUrl(file) {
+        const src = await readFileAsDataUrl(file);
+        const image = await loadImageElement(src);
+        const maxWidth = 1600;
+        const scale = image.naturalWidth > 0 ? Math.min(1, maxWidth / image.naturalWidth) : 1;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+          throw new Error("Could not prepare that image.");
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL("image/png");
+      }
+
+      function clearImageContext(options = {}) {
+        const { showToastMessage = false } = options;
+        const hadImage = Boolean(state.contextImageDataUrl);
+
+        state.contextImageDataUrl = "";
+        state.contextImageLabel = "";
+        elements.screenImage.removeAttribute("src");
+
+        if (hadImage) {
+          updateScreenUI();
+          refreshAutoAnalyze();
+        }
+
+        if (hadImage && showToastMessage) {
+          showToast("Screenshot removed.");
+        }
+      }
+
       function updateScreenAttachedChip() {
-        const attached = Boolean(state.stream);
+        const attached = hasVisualContext();
         elements.screenAttachedChip.hidden = !attached;
+        elements.screenAttachedChip.textContent = state.stream ? "screen attached" : "screenshot attached";
       }
 
       function refreshComposerState() {
@@ -4211,7 +4371,7 @@
             return;
           }
 
-          if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && state.stream && !state.thinking) {
+          if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && hasVisualContext() && !state.thinking) {
             event.preventDefault();
             requestTutor(DEFAULT_ANALYZE_PROMPT, {
               captureScreen: true,
@@ -4409,7 +4569,7 @@
           elements.sessionStatusPill.textContent = state.thinkingLabel;
           elements.sessionStatusPill.className = "status-pill live";
         } else {
-          elements.sessionStatusPill.textContent = state.stream ? "Ready To Analyze" : "Ready";
+          elements.sessionStatusPill.textContent = hasVisualContext() ? "Ready To Analyze" : "Ready";
           elements.sessionStatusPill.className = "status-pill good";
         }
 
@@ -4427,6 +4587,8 @@
           elements.contextStatusPill.textContent = "Chat Focus";
         } else if (state.stream) {
           elements.contextStatusPill.textContent = state.autoAnalyze ? "Screen Live • Auto" : "Screen Live";
+        } else if (state.contextImageDataUrl) {
+          elements.contextStatusPill.textContent = "Screenshot Ready";
         } else {
           const currentSession = getCurrentSession();
           const userTurns = currentSession ? currentSession.totalTurns : 0;
@@ -4462,7 +4624,7 @@
         const totalMessages = state.messages.filter((message) => !message.error).length;
         const stats = [
           `${userTurns} prompt${userTurns === 1 ? "" : "s"}`,
-          state.stream ? "screen live" : "chat only",
+          state.stream ? "screen live" : state.contextImageDataUrl ? "screenshot ready" : "chat only",
           state.chatFocus
             ? "focus mode"
             : state.autoAnalyze && state.stream
@@ -4483,9 +4645,11 @@
         elements.copyThreadButton.disabled = !isMeaningfulSession(getCurrentSession());
         elements.chatEmptyGuideCopy.textContent = state.stream
           ? "Use Explain Screen, Find The Bug, or ask a precise why question. While sharing is on, every send includes the current frame automatically."
+          : state.contextImageDataUrl
+            ? "A screenshot is attached. Ask what it means, what bug stands out, or what to learn next from the visible details."
           : state.chatFocus
             ? "You are in chat focus mode. Switch back to split view any time if you want the preview stage visible again."
-            : "Start by sharing a tab, then ask what the page means, what the code is doing, or where the strongest bug signal is.";
+            : "Start by sharing a tab or adding a screenshot, then ask what the page means, what the code is doing, or where the strongest bug signal is.";
       }
 
       function renderMessages() {
@@ -4571,14 +4735,14 @@
           button.className = "quick-button";
           button.type = "button";
           button.textContent = action.label;
-          button.disabled = Boolean(action.capture && !state.stream);
+          button.disabled = Boolean(action.capture && !hasVisualContext());
           if (button.disabled) {
-            button.title = "Start screen sharing to use this action.";
+            button.title = "Share your screen or add a screenshot to use this action.";
           }
           button.addEventListener("click", () => {
             requestTutor(action.prompt, {
-              captureScreen: action.capture && Boolean(state.stream),
-              showUserMessage: !action.capture || !state.stream,
+              captureScreen: action.capture && hasVisualContext(),
+              showUserMessage: !action.capture || !hasVisualContext(),
             });
           });
           elements.quickActions.appendChild(button);
@@ -5049,34 +5213,52 @@
       }
 
       function updateScreenUI() {
-        const isLive = Boolean(state.stream);
-        elements.workspace?.classList.toggle("sharing", isLive);
+        const contextMode = getVisualContextMode();
+        const hasContext = contextMode !== "none";
+        elements.workspace?.classList.toggle("sharing", hasContext);
         updateScreenAttachedChip();
         renderWorkspaceMode();
         renderQuickActions();
         renderChatSummary();
         renderTopbarStatus();
-        elements.screenStage.classList.toggle("live", isLive);
-        elements.screenVideo.classList.toggle("live", isLive);
-        elements.videoControls.classList.toggle("visible", isLive);
-        elements.screenEmpty.classList.toggle("hidden", isLive);
-        elements.analyzeButton.disabled = state.thinking || !isLive;
-        elements.analyzeButton.textContent = isLive ? "Analyze Now" : "Share Screen First";
+        elements.screenStage.classList.toggle("live", hasContext);
+        elements.screenVideo.classList.toggle("live", contextMode === "stream");
+        elements.screenImage.classList.toggle("live", contextMode === "image");
+        elements.videoControls.classList.toggle("visible", contextMode === "stream");
+        elements.imageControls.classList.toggle("visible", contextMode === "image");
+        elements.screenEmpty.classList.toggle("hidden", hasContext);
+        elements.autoAnalyzeToggle.disabled = state.thinking || contextMode !== "stream";
+        elements.analyzeButton.disabled = state.thinking || !hasContext;
+        elements.analyzeButton.textContent =
+          contextMode === "stream"
+            ? "Analyze Now"
+            : contextMode === "image"
+              ? "Analyze Screenshot"
+              : "Add Context First";
 
         if (state.thinking) {
           elements.stageStatusChip.textContent = state.thinkingLabel;
           elements.stageStatusChip.className = "stage-status-chip live";
-        } else if (isLive) {
+        } else if (contextMode === "stream") {
           elements.stageStatusChip.textContent = "Live Capture";
+          elements.stageStatusChip.className = "stage-status-chip live";
+        } else if (contextMode === "image") {
+          elements.stageStatusChip.textContent = "Screenshot Ready";
           elements.stageStatusChip.className = "stage-status-chip live";
         } else {
           elements.stageStatusChip.textContent = "Ready to Share";
           elements.stageStatusChip.className = "stage-status-chip";
         }
 
-        if (!isLive) {
+        if (!hasContext) {
           elements.screenMeta.textContent =
-            "No live screen yet. Start sharing to let LENS see what you are working on.";
+            "No screen context yet. Share your screen or add a screenshot to let LENS see what you are working on.";
+          return;
+        }
+
+        if (contextMode === "image") {
+          const label = state.contextImageLabel || "Attached screenshot";
+          elements.screenMeta.textContent = `Attached screenshot: ${label}`;
           return;
         }
 
@@ -5194,7 +5376,7 @@
         try {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
             const unsupportedMessage = window.matchMedia("(max-width: 720px)").matches
-              ? "Screen sharing is not available in this mobile browser. Try another browser or open LENS on desktop."
+              ? "Live screen sharing is not available in this mobile browser. Use Add Screenshot on phone, or open LENS on desktop."
               : "This browser does not support screen sharing.";
             throw new Error(unsupportedMessage);
           }
@@ -5211,6 +5393,8 @@
             preferCurrentTab: false,
             selfBrowserSurface: "exclude",
           });
+
+          clearImageContext();
 
           const track = stream.getVideoTracks()[0];
 
@@ -5299,6 +5483,10 @@
       }
 
       function captureFrame() {
+        if (state.contextImageDataUrl) {
+          return state.contextImageDataUrl;
+        }
+
         const video = elements.screenVideo;
         if (!state.stream || !video.videoWidth || !video.videoHeight) {
           return "";
@@ -5359,7 +5547,7 @@
         if (options.captureScreen) {
           frameDataUrl = captureFrame();
           if (!frameDataUrl) {
-            showToast("Start screen sharing before analyzing.", true);
+            showToast("Share your screen or add a screenshot before analyzing.", true);
             return;
           }
         }
@@ -5373,9 +5561,13 @@
           renderAll();
         }
 
-        setThinking(true, options.captureScreen ? "Analyzing Screen" : "Composing Answer");
+        const visualContextMode = getVisualContextMode();
+        const isImageContext = options.captureScreen && visualContextMode === "image";
+        setThinking(true, options.captureScreen ? (isImageContext ? "Analyzing Screenshot" : "Analyzing Screen") : "Composing Answer");
         elements.screenMeta.textContent = options.captureScreen
-          ? "Analyzing the current screen..."
+          ? isImageContext
+            ? "Analyzing the attached screenshot..."
+            : "Analyzing the current screen..."
           : "Thinking through your question...";
 
         try {
