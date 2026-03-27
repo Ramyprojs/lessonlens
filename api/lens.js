@@ -52,7 +52,8 @@ function resolveCredentials(body) {
 
 async function callCloudflare(credentials, payload) {
   let response;
-  let data;
+  let raw = "";
+  let data = null;
 
   try {
     response = await fetch(cloudflareUrl(credentials.accountId), {
@@ -68,17 +69,42 @@ async function callCloudflare(credentials, payload) {
   }
 
   try {
-    data = await response.json();
+    raw = await response.text();
   } catch {
-    throw new Error(`Cloudflare returned status ${response.status} with an unreadable response.`);
+    throw new Error(`Cloudflare returned status ${response.status} and the response body could not be read.`);
   }
+
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      data = null;
+    }
+  }
+
+  const fallbackText = raw
+    ? raw
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 220)
+    : "";
 
   if (!response.ok || data?.success === false) {
     const apiError =
       (Array.isArray(data?.errors) && data.errors.map((entry) => entry?.message).filter(Boolean).join(" ")) ||
       data?.message ||
+      fallbackText ||
       `Cloudflare returned status ${response.status}.`;
     throw new Error(apiError);
+  }
+
+  if (!data) {
+    throw new Error(
+      fallbackText
+        ? `Cloudflare returned status ${response.status} with a non-JSON response: ${fallbackText}`
+        : `Cloudflare returned status ${response.status} with an unreadable response.`
+    );
   }
 
   return data;
@@ -110,6 +136,22 @@ function extractReply(data) {
     "";
 
   return String(reply || "").trim();
+}
+
+function parseRequestBody(body) {
+  if (body && typeof body === "object") {
+    return body;
+  }
+
+  if (typeof body === "string" && body.trim()) {
+    try {
+      return JSON.parse(body);
+    } catch {
+      throw new Error("Request body must be valid JSON.");
+    }
+  }
+
+  return {};
 }
 
 async function proxyLensTurn(body) {
@@ -182,7 +224,7 @@ module.exports = async function handler(request, response) {
   }
 
   try {
-    const body = request.body && typeof request.body === "object" ? request.body : {};
+    const body = parseRequestBody(request.body);
     const reply = await proxyLensTurn(body);
     response.status(200).set(DEFAULT_HEADERS).json({ reply });
   } catch (error) {
