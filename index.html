@@ -2487,6 +2487,10 @@
         white-space: pre;
       }
 
+      .mobile-dock {
+        display: none;
+      }
+
       @media (max-width: 1180px) {
         .hero-panel,
         .recent-panel,
@@ -2506,32 +2510,419 @@
       }
 
       @media (max-width: 720px) {
-        .hero-panel {
-          padding: 22px;
+        html,
+        body {
+          min-height: 100dvh;
         }
 
-        .chat-summary-row,
-        .chat-session-stats,
-        .history-toolbar {
+        body {
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .app-shell {
           width: 100%;
+          padding:
+            10px
+            calc(10px + env(safe-area-inset-right))
+            calc(110px + env(safe-area-inset-bottom))
+            calc(10px + env(safe-area-inset-left));
+          gap: 10px;
+        }
+
+        .topbar {
+          position: sticky;
+          top: 8px;
+          z-index: 24;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 10px;
+          padding: 12px 14px;
+          border-radius: 22px;
+          background: linear-gradient(180deg, rgba(28, 18, 21, 0.94), rgba(22, 15, 17, 0.88));
+          backdrop-filter: blur(18px);
+        }
+
+        .brand {
+          gap: 10px;
+        }
+
+        .brand-mark h1 {
+          font-size: 1.2rem;
+        }
+
+        .brand-underscore {
+          width: 54px;
+        }
+
+        .brand-status {
+          gap: 6px;
+          font-size: 0.54rem;
+        }
+
+        .brand-status span:last-child {
+          display: none;
+        }
+
+        .nav-tabs {
+          display: none;
+        }
+
+        .topbar-actions {
+          align-items: center;
+          gap: 6px;
+        }
+
+        #contextStatusPill {
+          display: none;
+        }
+
+        .status-pill {
+          padding: 0.48rem 0.7rem;
+          font-size: 0.64rem;
+          letter-spacing: 0.05em;
+        }
+
+        .views-shell {
+          height: auto;
+          overflow: visible;
+        }
+
+        .view {
+          padding: 0;
+          min-height: auto;
+        }
+
+        .panel,
+        .studio-panel,
+        .chat-panel,
+        .history-list-panel,
+        .history-detail-panel {
+          border-radius: 24px;
+        }
+
+        .panel-header,
+        .composer,
+        .modal-head,
+        .modal-body,
+        .modal-actions {
+          padding-left: 16px;
+          padding-right: 16px;
+        }
+
+        .panel-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+
+        .home-grid,
+        .history-layout {
+          gap: 12px;
+        }
+
+        .hero-panel {
+          grid-template-columns: 1fr;
+          padding: 20px;
+          gap: 18px;
+        }
+
+        .hero-copy h2 {
+          font-size: clamp(2rem, 11vw, 2.7rem);
+          max-width: 10ch;
+        }
+
+        .hero-copy p {
+          max-width: none;
+        }
+
+        .hero-visual {
+          order: 2;
+          min-height: 240px;
+        }
+
+        .floating-card,
+        .orbital-ring.three {
+          display: none;
+        }
+
+        .home-stat-row {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+
+        .stat-card:last-child {
+          grid-column: 1 / -1;
+        }
+
+        .feature-grid,
+        .workflow-grid,
+        .recent-list {
+          gap: 10px;
+        }
+
+        .workflow-step {
+          grid-template-columns: 42px 1fr;
+          gap: 12px;
+        }
+
+        .workflow-step span {
+          width: 42px;
+          height: 42px;
+          font-size: 1.1rem;
+        }
+
+        .workspace,
+        .workspace.sharing,
+        .workspace.chat-focus {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          height: auto;
+        }
+
+        .workspace.chat-focus .chat-panel {
+          min-height: calc(100dvh - 190px);
+        }
+
+        .studio-panel {
+          order: 1;
+        }
+
+        .chat-panel {
+          order: 2;
+          min-height: calc(100dvh - 220px);
+          min-width: 0;
+        }
+
+        .panel-header-actions,
+        .voice-control-row,
+        .composer-foot,
+        .analyze-bar,
+        .hero-actions,
+        .history-detail-actions,
+        .session-card-actions,
+        .history-card-actions {
+          flex-direction: row;
+          align-items: center;
+          flex-wrap: wrap;
           justify-content: flex-start;
         }
 
+        .panel-header-actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          width: 100%;
+        }
+
+        .panel-header-actions label {
+          grid-column: 1 / -1;
+        }
+
+        .chat-summary-row {
+          width: 100%;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+          align-items: stretch;
+          overflow: visible;
+        }
+
+        .chat-summary-row > button {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .screen-stage {
+          margin: 0 14px 14px;
+          min-height: 330px;
+          border-radius: 20px;
+        }
+
+        .screen-empty {
+          padding: 22px;
+        }
+
+        .screen-empty-card {
+          padding: 24px 20px;
+        }
+
+        .screen-empty-card h3 {
+          font-size: 1.8rem;
+        }
+
+        .screen-empty-suggestions {
+          justify-content: flex-start;
+        }
+
+        .analyze-bar {
+          gap: 10px;
+          border-radius: 18px;
+        }
+
+        .voice-control-row {
+          padding: 10px 16px 0;
+          flex-wrap: wrap;
+          overflow: visible;
+          justify-content: flex-start;
+        }
+
+        .voice-control-row button,
+        .voice-control-row select {
+          flex: 0 1 auto;
+        }
+
+        .voice-model-status {
+          display: none;
+        }
+
+        .quick-actions {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          padding: 12px 16px 2px;
+          gap: 8px;
+          scrollbar-width: none;
+        }
+
+        .quick-actions::-webkit-scrollbar {
+          display: none;
+        }
+
+        .quick-button {
+          flex: 0 0 auto;
+        }
+
+        .chat-session-stats {
+          grid-column: 1 / -1;
+          width: 100%;
+          min-height: 0;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          scrollbar-width: none;
+        }
+
+        .chat-session-stats::-webkit-scrollbar {
+          display: none;
+        }
+
+        .chat-stat-chip {
+          flex: 0 0 auto;
+        }
+
         .chat-empty-guide {
-          margin: 0 16px;
+          margin: 0 14px;
+          border-radius: 18px;
+        }
+
+        .chat-thread {
+          padding: 14px 14px 132px;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .message {
+          gap: 8px;
+        }
+
+        .message.assistant {
+          align-items: flex-start;
+        }
+
+        .bubble {
+          max-width: 100%;
+          border-radius: 18px;
+        }
+
+        .message.assistant .bubble {
+          width: calc(100% - 42px);
+          max-width: calc(100% - 42px);
+        }
+
+        .composer {
+          position: sticky;
+          bottom: calc(86px + env(safe-area-inset-bottom));
+          z-index: 3;
+          margin-top: auto;
+          border-top: 1px solid var(--border-soft);
+          border-radius: 22px 22px 0 0;
+          background: linear-gradient(180deg, rgba(38, 26, 29, 0.96), rgba(31, 22, 24, 0.98));
+          backdrop-filter: blur(18px);
+        }
+
+        .composer textarea {
+          min-height: 90px;
+          border-radius: 18px;
+        }
+
+        .composer-note {
+          font-size: 0.67rem;
+          line-height: 1.55;
+        }
+
+        .composer-actions {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .composer-actions button {
+          min-width: 82px;
+        }
+
+        .history-layout {
+          grid-template-columns: 1fr;
         }
 
         .history-toolbar {
+          width: 100%;
           flex-direction: column;
           align-items: stretch;
+          gap: 10px;
         }
 
         .history-results-meta {
           white-space: normal;
         }
 
-        .screen-empty-suggestions {
-          justify-content: center;
+        .history-list,
+        .history-message-list {
+          max-height: none;
+        }
+
+        .history-message-list {
+          padding-bottom: 10px;
+        }
+
+        .mobile-dock {
+          position: fixed;
+          left: 10px;
+          right: 10px;
+          bottom: calc(10px + env(safe-area-inset-bottom));
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          padding: 10px;
+          border-radius: 24px;
+          border: 1px solid rgba(255, 154, 99, 0.16);
+          background: linear-gradient(180deg, rgba(33, 22, 25, 0.94), rgba(26, 18, 21, 0.92));
+          box-shadow: 0 24px 50px rgba(5, 3, 4, 0.42);
+          backdrop-filter: blur(18px);
+          z-index: 30;
+        }
+
+        .mobile-dock-tab {
+          border: 0;
+          border-radius: 16px;
+          padding: 0.88rem 0.7rem;
+          background: transparent;
+          color: var(--text-secondary);
+          font-size: 0.78rem;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+
+        .mobile-dock-tab.active {
+          background: linear-gradient(135deg, #f59e0b, var(--accent));
+          color: #24140f;
+          box-shadow: 0 10px 20px rgba(255, 122, 69, 0.26);
         }
       }
 
@@ -2859,6 +3250,12 @@
           </div>
         </section>
       </main>
+
+      <nav class="mobile-dock" aria-label="Mobile primary">
+        <button class="mobile-dock-tab active" type="button" data-view="home">Home</button>
+        <button class="mobile-dock-tab" type="button" data-view="studio">Studio</button>
+        <button class="mobile-dock-tab" type="button" data-view="history">History</button>
+      </nav>
     </div>
 
 
@@ -2982,6 +3379,7 @@
         homeTotalQuestions: document.getElementById("homeTotalQuestions"),
         homeTotalSessions: document.getElementById("homeTotalSessions"),
         micButton: document.getElementById("micButton"),
+        mobileNavTabs: Array.from(document.querySelectorAll(".mobile-dock-tab")),
         newChatButton: document.getElementById("newChatButton"),
         navTabs: Array.from(document.querySelectorAll(".nav-tab")),
         quickActions: document.getElementById("quickActions"),
@@ -3047,6 +3445,10 @@
 
       function bindEvents() {
         elements.navTabs.forEach((button) => {
+          button.addEventListener("click", () => setActiveView(button.dataset.view));
+        });
+
+        elements.mobileNavTabs.forEach((button) => {
           button.addEventListener("click", () => setActiveView(button.dataset.view));
         });
 
@@ -3921,6 +4323,10 @@
         });
 
         elements.navTabs.forEach((button) => {
+          button.classList.toggle("active", button.dataset.view === state.currentView);
+        });
+
+        elements.mobileNavTabs.forEach((button) => {
           button.classList.toggle("active", button.dataset.view === state.currentView);
         });
       }
