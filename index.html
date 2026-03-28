@@ -264,6 +264,7 @@
 
       .nav-tab,
       .gear-button,
+      .settings-button,
       .secondary-button,
       .primary-button,
       .ghost-button,
@@ -302,6 +303,7 @@
       .nav-tab:hover,
       .nav-tab:focus-visible,
       .gear-button:hover,
+      .settings-button:hover,
       .secondary-button:hover,
       .primary-button:hover,
       .ghost-button:hover,
@@ -356,6 +358,7 @@
       }
 
       .gear-button,
+      .settings-button,
       .secondary-button,
       .primary-button,
       .ghost-button,
@@ -373,6 +376,14 @@
         color: var(--text);
         font-size: 1.05rem;
         box-shadow: 0 0 12px rgba(0, 212, 255, 0.08);
+      }
+
+      .settings-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        white-space: nowrap;
       }
 
       .primary-button,
@@ -3055,8 +3066,10 @@
         </nav>
 
         <div class="topbar-actions">
+          <div id="credentialStatus" class="status-pill subtle">API Needed</div>
           <div id="contextStatusPill" class="status-pill subtle">Studio</div>
           <div id="sessionStatusPill" class="status-pill subtle">Fresh Session</div>
+          <button id="openSettingsButton" class="secondary-button settings-button" type="button">Connect API</button>
         </div>
       </header>
 
@@ -3359,6 +3372,40 @@
         <button class="mobile-dock-tab" type="button" data-view="studio">Studio</button>
         <button class="mobile-dock-tab" type="button" data-view="history">History</button>
       </nav>
+
+      <div id="settingsModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+          <div class="modal-head">
+            <h3 id="settingsTitle">API Settings</h3>
+            <p>Save your Cloudflare Workers AI credentials in this browser so the deployed app can call the tutor API even when Vercel server credentials are missing.</p>
+          </div>
+
+          <form id="settingsForm">
+            <div class="modal-body">
+              <div class="field">
+                <label for="accountIdInput">Cloudflare Account ID</label>
+                <input id="accountIdInput" name="accountId" type="text" autocomplete="off" />
+              </div>
+
+              <div class="field">
+                <label for="apiTokenInput">Cloudflare API Token</label>
+                <div class="field-row">
+                  <input id="apiTokenInput" name="apiToken" type="password" autocomplete="off" />
+                  <button id="toggleTokenButton" class="secondary-button" type="button">Show</button>
+                </div>
+              </div>
+
+              <p class="helper">These credentials are stored only in this browser. They are sent with your tutor requests only when server-side credentials are unavailable.</p>
+            </div>
+
+            <div class="modal-actions">
+              <button id="clearSettingsButton" class="ghost-button" type="button">Clear</button>
+              <button id="closeSettingsButton" class="secondary-button" type="button">Close</button>
+              <button class="primary-button" type="submit">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
 
@@ -3367,6 +3414,7 @@
 
     <script>
       const STORAGE_KEYS = {
+        settings: "lens.cloudflare.settings.v1",
         sessions: "lens.sessions.v2",
         ui: "lens.ui.v1",
         voiceEnabled: "lens_voice_enabled",
@@ -3422,6 +3470,7 @@
         stream: null,
         contextImageDataUrl: "",
         contextImageLabel: "",
+        settings: loadSettings(),
         messages: [],
         thinking: false,
         thinkingLabel: "Thinking",
@@ -3449,9 +3498,11 @@
       };
 
       const elements = {
+        accountIdInput: document.getElementById("accountIdInput"),
         aiDot: document.getElementById("aiDot"),
         aiStatusText: document.getElementById("aiStatusText"),
         analyzeButton: document.getElementById("analyzeButton"),
+        apiTokenInput: document.getElementById("apiTokenInput"),
         autoAnalyzeToggle: document.getElementById("autoAnalyzeToggle"),
         backgroundCanvas: document.getElementById("backgroundCanvas"),
         chatEmptyGuide: document.getElementById("chatEmptyGuide"),
@@ -3461,7 +3512,10 @@
         chatSessionStats: document.getElementById("chatSessionStats"),
         chatForm: document.getElementById("chatForm"),
         chatThread: document.getElementById("chatThread"),
+        clearSettingsButton: document.getElementById("clearSettingsButton"),
+        closeSettingsButton: document.getElementById("closeSettingsButton"),
         copyThreadButton: document.getElementById("copyThreadButton"),
+        credentialStatus: document.getElementById("credentialStatus"),
         contextStatusPill: document.getElementById("contextStatusPill"),
         emptyOpenHistoryButton: document.getElementById("emptyOpenHistoryButton"),
         clearImageButton: document.getElementById("clearImageButton"),
@@ -3490,6 +3544,7 @@
         mobileNavTabs: Array.from(document.querySelectorAll(".mobile-dock-tab")),
         newChatButton: document.getElementById("newChatButton"),
         navTabs: Array.from(document.querySelectorAll(".nav-tab")),
+        openSettingsButton: document.getElementById("openSettingsButton"),
         quickActions: document.getElementById("quickActions"),
         screenEmpty: document.getElementById("screenEmpty"),
         screenImage: document.getElementById("screenImage"),
@@ -3502,6 +3557,9 @@
         stageStatusChip: document.getElementById("stageStatusChip"),
         startSharingButton: document.getElementById("startSharingButton"),
         stopSharingButton: document.getElementById("stopSharingButton"),
+        settingsForm: document.getElementById("settingsForm"),
+        settingsModal: document.getElementById("settingsModal"),
+        toggleTokenButton: document.getElementById("toggleTokenButton"),
         imageControls: document.getElementById("imageControls"),
         imageUploadInput: document.getElementById("imageUploadInput"),
         replaceImageButton: document.getElementById("replaceImageButton"),
@@ -3543,6 +3601,7 @@
         const savedChatFocus = loadChatFocus();
         state.chatFocus = savedChatFocus === null ? shouldDefaultChatFocus() : savedChatFocus;
 
+        hydrateSettingsForm();
         bindEvents();
         elements.autoAnalyzeToggle.checked = state.autoAnalyze;
         renderAll();
@@ -3568,11 +3627,38 @@
         elements.homeOpenStudioButton.addEventListener("click", () => setActiveView("studio"));
         elements.homeHistoryButton.addEventListener("click", () => setActiveView("history"));
         elements.homeNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
+        elements.openSettingsButton?.addEventListener("click", openSettings);
+        elements.closeSettingsButton?.addEventListener("click", closeSettings);
+        elements.clearSettingsButton?.addEventListener("click", clearSettings);
         elements.chatFocusButton.addEventListener("click", toggleChatFocus);
         elements.studioNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.historyNewSessionButton.addEventListener("click", () => startNewSession({ switchToStudio: true }));
         elements.emptyOpenHistoryButton.addEventListener("click", () => setActiveView("history"));
         elements.copyThreadButton.addEventListener("click", copyCurrentTranscript);
+
+        elements.settingsModal?.addEventListener("click", (event) => {
+          if (event.target === elements.settingsModal) {
+            closeSettings();
+          }
+        });
+
+        elements.toggleTokenButton?.addEventListener("click", () => {
+          const isPassword = elements.apiTokenInput.type === "password";
+          elements.apiTokenInput.type = isPassword ? "text" : "password";
+          elements.toggleTokenButton.textContent = isPassword ? "Hide" : "Show";
+        });
+
+        elements.settingsForm?.addEventListener("submit", (event) => {
+          event.preventDefault();
+          state.settings = {
+            accountId: elements.accountIdInput.value.trim(),
+            apiToken: elements.apiTokenInput.value.trim(),
+          };
+          persistSettings();
+          closeSettings();
+          renderTopbarStatus();
+          showToast("API credentials saved in this browser.");
+        });
 
         elements.startSharingButton.addEventListener("click", startScreenShare);
         elements.stopSharingButton.addEventListener("click", stopScreenShare);
@@ -3686,6 +3772,12 @@
             deleteSession(state.selectedHistoryId);
           }
         });
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            closeSettings();
+          }
+        });
       }
 
       function loadSessions() {
@@ -3707,6 +3799,27 @@
         } catch {
           return [];
         }
+      }
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEYS.settings);
+          if (!raw) {
+            return { accountId: "", apiToken: "" };
+          }
+
+          const parsed = JSON.parse(raw);
+          return {
+            accountId: typeof parsed.accountId === "string" ? parsed.accountId : "",
+            apiToken: typeof parsed.apiToken === "string" ? parsed.apiToken : "",
+          };
+        } catch {
+          return { accountId: "", apiToken: "" };
+        }
+      }
+
+      function persistSettings() {
+        localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(state.settings));
       }
 
       function loadUiState() {
@@ -3762,6 +3875,41 @@
 
       function loadSelectedVoiceName() {
         return localStorage.getItem(STORAGE_KEYS.voiceSelected) || "af_bella";
+      }
+
+      function hydrateSettingsForm() {
+        if (!elements.accountIdInput || !elements.apiTokenInput) {
+          return;
+        }
+
+        elements.accountIdInput.value = state.settings.accountId;
+        elements.apiTokenInput.value = state.settings.apiToken;
+        elements.apiTokenInput.type = "password";
+        if (elements.toggleTokenButton) {
+          elements.toggleTokenButton.textContent = "Show";
+        }
+      }
+
+      function openSettings() {
+        hydrateSettingsForm();
+        elements.settingsModal?.classList.add("open");
+        elements.settingsModal?.setAttribute("aria-hidden", "false");
+        const target = state.settings.accountId ? elements.apiTokenInput : elements.accountIdInput;
+        window.setTimeout(() => target?.focus(), 30);
+      }
+
+      function closeSettings() {
+        elements.settingsModal?.classList.remove("open");
+        elements.settingsModal?.setAttribute("aria-hidden", "true");
+        elements.openSettingsButton?.focus();
+      }
+
+      function clearSettings() {
+        state.settings = { accountId: "", apiToken: "" };
+        persistSettings();
+        hydrateSettingsForm();
+        renderTopbarStatus();
+        showToast("Saved API credentials cleared.");
       }
 
       function hasVisualContext() {
@@ -4146,6 +4294,13 @@
           state.serverCredentialsAvailable = !isLocalHost;
         } finally {
           renderTopbarStatus();
+          if (!state.serverCredentialsAvailable && !(state.settings.accountId && state.settings.apiToken)) {
+            window.setTimeout(() => {
+              if (!state.thinking) {
+                openSettings();
+              }
+            }, 120);
+          }
         }
       }
 
@@ -4615,12 +4770,28 @@
       }
 
       function renderTopbarStatus() {
+        const localCredentialsReady = Boolean(state.settings.accountId && state.settings.apiToken);
+        const credentialsReady = localCredentialsReady || state.serverCredentialsAvailable;
+
         if (state.thinking) {
           elements.sessionStatusPill.textContent = state.thinkingLabel;
           elements.sessionStatusPill.className = "status-pill live";
         } else {
           elements.sessionStatusPill.textContent = hasVisualContext() ? "Ready To Analyze" : "Ready";
           elements.sessionStatusPill.className = "status-pill good";
+        }
+
+        if (elements.credentialStatus) {
+          elements.credentialStatus.textContent = credentialsReady ? "API Ready" : "API Needed";
+          elements.credentialStatus.className =
+            credentialsReady ? "status-pill good" : "status-pill subtle";
+        }
+
+        if (elements.openSettingsButton) {
+          elements.openSettingsButton.textContent = credentialsReady ? "API Settings" : "Connect API";
+          elements.openSettingsButton.className = credentialsReady
+            ? "secondary-button settings-button"
+            : "primary-button settings-button";
         }
 
         if (!elements.contextStatusPill) {
@@ -5259,7 +5430,7 @@
       }
 
       function hasCredentials() {
-        return Boolean(state.serverCredentialsAvailable);
+        return Boolean((state.settings.accountId && state.settings.apiToken) || state.serverCredentialsAvailable);
       }
 
       function updateScreenUI() {
@@ -5581,7 +5752,8 @@
         }
 
         if (!hasCredentials()) {
-          showToast("Cloudflare credentials are missing in .env. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN, then restart the server.", true);
+          showToast("Cloudflare credentials are missing. Open API settings and save your Account ID and API token.", true);
+          openSettings();
           return;
         }
 
@@ -5614,6 +5786,8 @@
 
         try {
           const reply = await callLensApi({
+            accountId: state.settings.accountId,
+            apiToken: state.settings.apiToken,
             history,
             frameDataUrl,
             userMessage: enhancedPrompt,
@@ -5629,9 +5803,11 @@
           }
           syncCurrentSession();
         } catch (error) {
-          state.messages.push(
-            createMessage("assistant", error instanceof Error ? error.message : "The request failed.", { error: true })
-          );
+          const message = error instanceof Error ? error.message : "The request failed.";
+          if (/Missing Cloudflare Account ID or API Token/i.test(message)) {
+            openSettings();
+          }
+          state.messages.push(createMessage("assistant", message, { error: true }));
           syncCurrentSession();
         } finally {
           setThinking(false, "Tutor Ready");
@@ -5640,7 +5816,7 @@
         }
       }
 
-      async function callLensApi({ history, frameDataUrl, userMessage }) {
+      async function callLensApi({ accountId, apiToken, history, frameDataUrl, userMessage }) {
         let response;
         let raw = "";
         let data = null;
@@ -5651,6 +5827,11 @@
           frameDataUrl,
           userMessage,
         };
+
+        if (accountId && apiToken) {
+          payload.accountId = accountId;
+          payload.apiToken = apiToken;
+        }
 
         if (frameDataUrl && dataUrlByteLength(frameDataUrl) > VISUAL_CONTEXT_MAX_BYTES * 1.2) {
           throw new Error("The screen image is still too large to send. Try zooming in on the important area and analyze again.");
