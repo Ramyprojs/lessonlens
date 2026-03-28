@@ -4785,6 +4785,7 @@
           elements.credentialStatus.textContent = credentialsReady ? "API Ready" : "API Needed";
           elements.credentialStatus.className =
             credentialsReady ? "status-pill good" : "status-pill subtle";
+          elements.credentialStatus.hidden = Boolean(state.serverCredentialsAvailable);
         }
 
         if (elements.openSettingsButton) {
@@ -4792,6 +4793,7 @@
           elements.openSettingsButton.className = credentialsReady
             ? "secondary-button settings-button"
             : "primary-button settings-button";
+          elements.openSettingsButton.hidden = Boolean(state.serverCredentialsAvailable);
         }
 
         if (!elements.contextStatusPill) {
