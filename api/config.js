@@ -6,18 +6,27 @@ const DEFAULT_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+function applyHeaders(response) {
+  Object.entries(DEFAULT_HEADERS).forEach(([key, value]) => {
+    response.setHeader(key, value);
+  });
+}
+
 module.exports = async function handler(request, response) {
   if (request.method === "OPTIONS") {
-    response.status(204).set(DEFAULT_HEADERS).end();
+    applyHeaders(response);
+    response.status(204).end();
     return;
   }
 
   if (request.method !== "GET") {
-    response.status(405).set(DEFAULT_HEADERS).json({ error: "Method not allowed." });
+    applyHeaders(response);
+    response.status(405).json({ error: "Method not allowed." });
     return;
   }
 
-  response.status(200).set(DEFAULT_HEADERS).json({
+  applyHeaders(response);
+  response.status(200).json({
     hasServerCredentials: Boolean(
       process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_API_TOKEN
     ),

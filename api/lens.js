@@ -8,6 +8,12 @@ const DEFAULT_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+function applyHeaders(response) {
+  Object.entries(DEFAULT_HEADERS).forEach(([key, value]) => {
+    response.setHeader(key, value);
+  });
+}
+
 const SYSTEM_PROMPT = `You are LENS, an AI tutor. Your only job is to help the user learn and understand
 whatever is on their screen right now.
 
@@ -214,21 +220,25 @@ async function proxyLensTurn(body) {
 
 module.exports = async function handler(request, response) {
   if (request.method === "OPTIONS") {
-    response.status(204).set(DEFAULT_HEADERS).end();
+    applyHeaders(response);
+    response.status(204).end();
     return;
   }
 
   if (request.method !== "POST") {
-    response.status(405).set(DEFAULT_HEADERS).json({ error: "Method not allowed." });
+    applyHeaders(response);
+    response.status(405).json({ error: "Method not allowed." });
     return;
   }
 
   try {
     const body = parseRequestBody(request.body);
     const reply = await proxyLensTurn(body);
-    response.status(200).set(DEFAULT_HEADERS).json({ reply });
+    applyHeaders(response);
+    response.status(200).json({ reply });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Lens proxy request failed.";
-    response.status(500).set(DEFAULT_HEADERS).json({ error: message });
+    applyHeaders(response);
+    response.status(500).json({ error: message });
   }
 };
