@@ -3389,6 +3389,8 @@
       let screenShareInFlight = false;
       let sessionPersistHandle = 0;
       let kokoroInitPromise = null;
+      let voiceWarmupHandle = 0;
+      let voiceWarmupListener = null;
 
       const state = {
         stream: null,
@@ -3417,6 +3419,7 @@
           keepAliveTimer: null,
           modelLoading: false,
           kokoroReady: false,
+          warmupSilent: false,
         },
       };
 
@@ -5063,6 +5066,52 @@
 
         hydrateVoices();
         window.lensVoiceEnabled = state.voice.enabled;
+        scheduleVoiceWarmup();
+      }
+
+      function clearVoiceWarmupSchedule() {
+        if (voiceWarmupHandle) {
+          if ("cancelIdleCallback" in window) {
+            window.cancelIdleCallback(voiceWarmupHandle);
+          } else {
+            clearTimeout(voiceWarmupHandle);
+          }
+          voiceWarmupHandle = 0;
+        }
+
+        if (voiceWarmupListener) {
+          window.removeEventListener("pointerdown", voiceWarmupListener);
+          window.removeEventListener("keydown", voiceWarmupListener);
+          voiceWarmupListener = null;
+        }
+      }
+
+      function scheduleVoiceWarmup() {
+        if (!state.voice.enabled || !state.voice.speechSupported || window.lensKokoro || kokoroInitPromise) {
+          return;
+        }
+
+        clearVoiceWarmupSchedule();
+
+        voiceWarmupListener = () => {
+          clearVoiceWarmupSchedule();
+          void initKokoro({ silent: true });
+        };
+
+        window.addEventListener("pointerdown", voiceWarmupListener, { once: true, passive: true });
+        window.addEventListener("keydown", voiceWarmupListener, { once: true });
+
+        const runWarmup = () => {
+          clearVoiceWarmupSchedule();
+          void initKokoro({ silent: true });
+        };
+
+        if ("requestIdleCallback" in window) {
+          voiceWarmupHandle = window.requestIdleCallback(runWarmup, { timeout: 2200 });
+          return;
+        }
+
+        voiceWarmupHandle = window.setTimeout(runWarmup, 1400);
       }
 
       function getBestVoice() {
@@ -5137,7 +5186,7 @@
         }
 
         if (elements.voiceModelStatus) {
-          elements.voiceModelStatus.hidden = !state.voice.modelLoading;
+          elements.voiceModelStatus.hidden = !state.voice.modelLoading || state.voice.warmupSilent;
           elements.voiceModelStatus.textContent = "Preparing natural voice...";
           elements.voiceModelStatus.classList.toggle("loading", state.voice.modelLoading);
         }
@@ -5149,6 +5198,7 @@
         window.lensVoiceEnabled = state.voice.enabled;
 
         if (!state.voice.enabled) {
+          clearVoiceWarmupSchedule();
           stopSpeaking();
         } else {
           void initKokoro();
@@ -5199,9 +5249,11 @@
         setVoiceState("idle");
       }
 
-      async function initKokoro() {
+      async function initKokoro(options = {}) {
+        const { silent = false } = options;
         if (window.lensKokoro) {
           state.voice.kokoroReady = true;
+          state.voice.warmupSilent = false;
           refreshVoiceControls();
           return window.lensKokoro;
         }
@@ -5210,6 +5262,8 @@
           return kokoroInitPromise;
         }
 
+        clearVoiceWarmupSchedule();
+        state.voice.warmupSilent = silent;
         state.voice.modelLoading = true;
         refreshVoiceControls();
 
@@ -5225,6 +5279,7 @@
             return null;
           } finally {
             state.voice.modelLoading = false;
+            state.voice.warmupSilent = false;
             refreshVoiceControls();
             kokoroInitPromise = null;
           }
